@@ -1,0 +1,56 @@
+(*
+    Schmidty.
+*)
+Add LoadPath "src/formal".
+Require Import Maps.
+Require Import Context.
+Import Context.Context.
+Require Import Coq.Lists.List.
+
+Definition tyid := id.
+
+Inductive ty : Set :=
+    | TNat : ty 
+    | TChr : ty
+    | TFun : ty -> ty -> ty
+    | TBool : ty
+    | TSum : ty -> ty -> ty
+    | TRcd : ty -> list (id* ty) -> ty
+    | TVar : tyid -> ty.
+
+Inductive tm : Set :=
+    | tif: tm -> tm -> tm -> tm 
+    | tvar : id -> tm
+    | tsuc : tm -> tm 
+    | tchr : nat -> tm 
+    | tfun : id -> ty -> tm -> tm 
+    | tlet : id -> tm -> tm 
+    | ttrue : tm
+    | tfalse : tm 
+    | tleft : tm -> ty -> tm 
+    | tright : ty -> tm -> tm
+    | tcase : tm -> tm -> tm -> tm 
+        (*
+            tcase (\ x -> x) (\ y -> y)
+        *)
+        (*
+            type information is 
+            lexical scoped
+        *)
+    | tletrcd : id -> id -> ty -> list (id* ty) -> tm -> tm
+        (*
+            letRcd (contructorA TypeA ParentType ((a, Int) (b, Int))
+            in ... 
+                 TypeA <: ParentType
+            then constructorA :: Int -> Int -> TypeA
+                 TypeA.a :: TypeA -> Int
+
+            letRcd (i J (Nat Nat))
+            then i :: Int -> Int -> J
+        *)
+    | tfield : ty -> id -> tm -> tm 
+        (*
+            TypeA.a :: TypeA -> Int
+        *)
+    | tseq : tm -> tm.
+
