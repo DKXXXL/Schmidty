@@ -1,3 +1,5 @@
+module AST where
+
 type Id = Integer
 type TyId = Id
 
@@ -7,46 +9,43 @@ data Ty =
     | TFun Ty Ty 
     | TBool
     | TSum Ty Ty 
+    | TRoot
+    --- Root of subtyping
     | TRcd Ty [(Id, Ty)] 
     --- Nominal Type, Not exposed 
     | TVar TyId
 --    | TInfer
+    deriving (Show, Eq)
 
 -- Terms
 
 data Tm =
     | MIf Tm Tm Tm
     | MVar Id
+    | MZero
     | MSuc Tm 
+    | MNGT Tm Tm 
+    | MNEQ Tm Tm
+    | MNLT Tm Tm
     | MChr Integer
+    | MCEQ Tm Tm 
     | MFun Id Ty Tm 
-    | MLet Id Tm 
+    | MApp Tm Tm 
+    | MLet Id Tm Tm
     | MTrue 
     | MFalse
+    | MBEQ Tm Tm 
     | MLeft Tm Ty 
     | MRight Ty Tm 
     | MCase Tm Tm Tm 
-    | MLetRcd Id TyId Ty [(Id, Ty)] Tm 
+    | MLetRcdW Id TyId Ty [(Id, Ty)] Tm 
+    --- Width Subtyping
     --- letrcd (constructorName 
     ---         TypeName 
     ---            SuperType ((FieldName FieldType) (FieldName FieldType)))
+    | MLetRcdD Id TyId Ty [(Id, Ty)] Tm 
+    --- Depth Subtyping
     | MField Ty Id Tm
     | MSeq Tm Tm 
+    deriving (Show, Eq)
 
-
-type Dict k v = [(k, v)]
-
-checkDict :: Dict k v -> k -> Maybe v 
-checkDict ((a, b): dict') k = if (a == k) then Just b else (checkDict dict' k)
-checkDict [] _ = Nothing
-
-addDict :: Dict k v -> k -> v -> Dict k v 
-addDict h a b = (a, b) : h
-
-type CustomedTypeInfo = Dict TyId Ty 
-type VarTypes = Dict Id Ty 
-
-
-has_type :: Tm -> Maybe Ty
-
-has_type' :: [(TyId, Ty)] -> 

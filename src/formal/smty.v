@@ -21,12 +21,19 @@ Inductive ty : Set :=
 Inductive tm : Set :=
     | tif: tm -> tm -> tm -> tm 
     | tvar : id -> tm
+    | tzero : tm
     | tsuc : tm -> tm 
+    | tngt : tm -> tm -> tm 
+    | tnlt : tm -> tm -> tm 
+    | tneq : tm -> tm -> tm
     | tchr : nat -> tm 
+    | tceq : tm -> tm -> tm 
     | tfun : id -> ty -> tm -> tm 
-    | tlet : id -> tm -> tm 
+    | tapp : tm -> tm -> tm
+    | tlet : id -> tm -> tm -> tm
     | ttrue : tm
     | tfalse : tm 
+    | tbeq : tm -> tm -> tm 
     | tleft : tm -> ty -> tm 
     | tright : ty -> tm -> tm
     | tcase : tm -> tm -> tm -> tm 
@@ -37,7 +44,7 @@ Inductive tm : Set :=
             type information is 
             lexical scoped
         *)
-    | tletrcd : id -> id -> ty -> list (id* ty) -> tm -> tm
+    | tletrcd : id -> tyid -> ty -> list (id* ty) -> tm -> tm
         (*
             letRcd (contructorA TypeA ParentType ((a, Int) (b, Int))
             in ... 
