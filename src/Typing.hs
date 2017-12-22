@@ -9,8 +9,25 @@ checkDict [] _ = Nothing
 addDict :: Dict k v -> k -> v -> Dict k v 
 addDict h a b = (a, b) : h
 
-type CustomedTypeDict = Dict TyId Ty 
+type RecordInfo = (Ty* [(Id* Ty)])
+type CustomedTypeDict = Dict TyId RecordInfo 
+-- type TypeAliases = Dict TyId Ty
 type VarTypeDict = Dict Id Ty 
+
+subtyOf :: CustomedTypeDict -> Ty -> Ty -> Bool
+subtyOf d h1 h2 = if (h1 == h2) 
+                    then true 
+                    else (subtypeOf' d h1 h2)
+
+subtypeOf' :: CustomedTypeDict -> Ty -> Ty -> Bool
+subtypeOf' d (TFun i o) (TFun i' o') =
+    (subtyOf d i' i) && (subtyOf d o o')
+subtypeOf' d (TSum a b) (TSum a' b') =
+    (subtyOf a a') && (subtyOf b b')
+subtypeOf' d (TVar sub) super =
+    let supOfSub, _ = checkDict d sub
+    in subtyOf d supOfSub super
+subtypeOf' _ _ _ = False
 
 
 has_type :: Tm -> Maybe Ty
@@ -18,6 +35,8 @@ has_type :: Tm -> Maybe Ty
 has_type' :: CustomedTypeDict ->
              VarTypeDict ->
              Tm -> Maybe Ty
+
+has_type' _ _ MNone = TNone
 
 has_type' tyd vd (MIf crit bA bB) =
         case (has_type' tyd vd crit) 
@@ -130,6 +149,30 @@ has_type' tyd vd (MCase crit bA bB) =
                          _ -> Nothing
                        _ -> Nothing
     }
+
+
+    
+    
+
+has_type' tyd vd (MLetRcdW cNmae tyName suTy record body) =
+    
+    let consTy = tyListToProd . (map fst) $ (record ++ (TVar tyName))
+    in 
+    
+
+tyListToProd :: [Ty] -> Ty
+
+tyListToProd (a : []) = a
+tyListToProd (a : l) = TFun a (tyListToProd l)
+
+
+
+
+checkSubtyping :: CustomedTypeDict -> [(Id, Ty)] -> [(Id, Ty)] -> Bool 
+checkSubtyping _ subty [] = True 
+checkSubtyping typesInfo (a:b) (a':b') =
+    subtyOf a a' 
+    && checkSubtyping b b'
 
 
         

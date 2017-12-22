@@ -9,17 +9,19 @@ data Ty =
     | TFun Ty Ty 
     | TBool
     | TSum Ty Ty 
-    | TRoot
+    | TNone
     --- Root of subtyping
-    | TRcd Ty [(Id, Ty)] 
+    --- | TRcd Ty [(Id, Ty)] 
     --- Nominal Type, Not exposed 
     | TVar TyId
+--  | TAlias TyId
 --    | TInfer
     deriving (Show, Eq)
 
 -- Terms
 
 data Tm =
+    | MNone
     | MIf Tm Tm Tm
     | MVar Id
     | MZero
@@ -38,14 +40,13 @@ data Tm =
     | MLeft Tm Ty 
     | MRight Ty Tm 
     | MCase Tm Tm Tm 
-    | MLetRcdW Id TyId Ty [(Id, Ty)] Tm 
+    | MLetRcd Id TyId Ty [(Id, Ty)] Tm 
     --- Width Subtyping
     --- letrcd (constructorName 
     ---         TypeName 
     ---            SuperType ((FieldName FieldType) (FieldName FieldType)))
-    | MLetRcdD Id TyId Ty [(Id, Ty)] Tm 
     --- Depth Subtyping
-    | MField Ty Id Tm
+    | MField Ty Id
     | MSeq Tm Tm 
     deriving (Show, Eq)
 

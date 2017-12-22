@@ -15,10 +15,12 @@ Inductive ty : Set :=
     | TFun : ty -> ty -> ty
     | TBool : ty
     | TSum : ty -> ty -> ty
+    | TNone : ty
     | TRcd : ty -> list (id* ty) -> ty
     | TVar : tyid -> ty.
 
 Inductive tm : Set :=
+    | tnone : tm 
     | tif: tm -> tm -> tm -> tm 
     | tvar : id -> tm
     | tzero : tm
