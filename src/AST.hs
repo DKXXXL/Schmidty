@@ -2,6 +2,7 @@ module AST where
 
 type Id = Integer
 type TyId = Id
+type InferId = Id
 
 data Ty = 
     | TNat
@@ -15,7 +16,7 @@ data Ty =
     --- Nominal Type, Not exposed 
     | TVar TyId
 --  | TAlias TyId
-    | TInfer
+    | TInfer InferId
     deriving (Show, Eq)
 
 -- Terms
@@ -50,3 +51,11 @@ data Tm =
     | MSeq Tm Tm 
     deriving (Show, Eq)
 
+type Dict k v = [(k, v)]
+
+checkDict :: Dict k v -> k -> Maybe v 
+checkDict ((a, b): dict') k = if (a == k) then Just b else (checkDict dict' k)
+checkDict [] _ = Nothing
+
+addDict :: Dict k v -> k -> v -> Dict k v 
+addDict h a b = (a, b) : h

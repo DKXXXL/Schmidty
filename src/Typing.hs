@@ -1,14 +1,5 @@
 module Typing where
 
-type Dict k v = [(k, v)]
-
-checkDict :: Dict k v -> k -> Maybe v 
-checkDict ((a, b): dict') k = if (a == k) then Just b else (checkDict dict' k)
-checkDict [] _ = Nothing
-
-addDict :: Dict k v -> k -> v -> Dict k v 
-addDict h a b = (a, b) : h
-
 type RecordInfo = (Ty* [(Id* Ty)])
 type CustomedTypeDict = Dict TyId RecordInfo 
 -- type TypeAliases = Dict TyId Ty
