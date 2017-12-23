@@ -31,6 +31,7 @@ subtypeOf' _ _ _ = False
 
 
 has_type :: Tm -> Maybe Ty
+has_type = has_type' [] [] 
 
 has_type' :: CustomedTypeDict ->
              VarTypeDict ->
@@ -150,22 +151,31 @@ has_type' tyd vd (MCase crit bA bB) =
                        _ -> Nothing
     }
 
+has_type' tyd vd (MLetRcd cName tyName suTy record body) =
+    let consTy = tyListToProd $ ((map fst record)++ (TVar tyName))
+        _, suprecord = checkDict tyd suTy
+    in  if ((suTy == TNone) 
+        || (checkSubtyping tyd record suprecord))
+        then has_type (addDict tyd tyName (suTy, record)) (addDict vd cName consTy) body
+        else Nothing
 
-    
-    
+has_type' tyd vd (MField (TVar tyid) fieldId) =
+    do {
+        rcdInf <- checkDict tyd tyid;
+        fieldType <- checkDict rcdInf fieldId;
+        return (TFun (TVar tyid) fieldType)
+    }
 
-has_type' tyd vd (MLetRcdW cNmae tyName suTy record body) =
-    
-    let consTy = tyListToProd . (map fst) $ (record ++ (TVar tyName))
-    in 
-    
+has_type' tyd vd (MField _ _) = Nothing
+
+has_type' tyd vd (MSeq pre post) =
+    (has_type' tyd vd pre)
+    >> has_type' tyd vd post
+
 
 tyListToProd :: [Ty] -> Ty
-
 tyListToProd (a : []) = a
 tyListToProd (a : l) = TFun a (tyListToProd l)
-
-
 
 
 checkSubtyping :: CustomedTypeDict -> [(Id, Ty)] -> [(Id, Ty)] -> Bool 
@@ -173,6 +183,12 @@ checkSubtyping _ subty [] = True
 checkSubtyping typesInfo (a:b) (a':b') =
     subtyOf a a' 
     && checkSubtyping b b'
+
+
+
+
+
+
 
 
         

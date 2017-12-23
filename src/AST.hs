@@ -15,7 +15,7 @@ data Ty =
     --- Nominal Type, Not exposed 
     | TVar TyId
 --  | TAlias TyId
---    | TInfer
+    | TInfer
     deriving (Show, Eq)
 
 -- Terms
