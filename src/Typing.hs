@@ -85,7 +85,7 @@ has_type' tyd vd (MCEQ a b) =
             then Just TBool
             else Nothing
         }
-has_type' tyd vd (MFun i tyI tm) =
+has_type' tyd vd (MFun i tyI tyO tm) =
     (has_type' tyd (addDict vd i tyI) tm) 
         >>= (\tyO -> return (TFun tyI tyO))
 has_type' tyd vd (MApp f x) = 

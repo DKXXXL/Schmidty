@@ -32,7 +32,7 @@ data Tm =
     | MNLT Tm Tm
     | MChr Integer
     | MCEQ Tm Tm 
-    | MFun Id Ty Tm 
+    | MFun Id Ty Ty Tm 
     | MApp Tm Tm 
     | MLet Id Tm Tm
     | MTrue 
@@ -59,3 +59,4 @@ checkDict [] _ = Nothing
 
 addDict :: Dict k v -> k -> v -> Dict k v 
 addDict h a b = (a, b) : h
+
