@@ -97,9 +97,10 @@ has_type' tyd vd (MApp f x) =
             if (tyI == xT) then Just tyO else Nothing
     }
 
-has_type' tyd vd (MLet i bind body) =
-    (has_type' tyd vd bind) 
-        >>= (\bindty -> has_type' tyd (addDict vd i bindty) body)
+has_type' tyd vd (MLet i T bind body) =
+    let newd = addDict vd i T
+    in (has_type' tyd newd bind) 
+        >>= (\bindty -> if (bindty == T) then has_type' tyd newd body else Nothing)
 
 has_type' _ _ MTrue =
     Just TBool

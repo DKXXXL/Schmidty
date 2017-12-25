@@ -34,7 +34,7 @@ data Tm =
     | MCEQ Tm Tm 
     | MFun Id Ty Ty Tm 
     | MApp Tm Tm 
-    | MLet Id Tm Tm
+    | MLet Id Ty Tm Tm
     | MTrue 
     | MFalse
     | MBEQ Tm Tm 

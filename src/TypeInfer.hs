@@ -2,17 +2,15 @@ module TypeInfer where
 
     type_infer :: Tm -> Maybe Tm 
     
-
     -- Type Equation
     data TyEqu = 
         | EqTy Ty Ty
-        | OfEqTy Tm Tm
-        | OfSubTy Tm Tm
-        | OfSupTy Tm Tm
-        | TmOfTy Tm Ty
         | SubTy Ty Ty
+        | SupTy Ty Ty
+        | TmOfTy Tm Ty
         | TmOfSubTy Tm Ty
         | TmOfSupTy Tm Ty
+        deriving (Show, Eq)
     
     known_cond :: TyEqu -> Bool
 
@@ -27,12 +25,14 @@ module TypeInfer where
 
     type_constraint :: Counter -> Tm -> [TyEqu]
     type_constraint ct (MIf crit bA bB) =
-        [TmOfTy crit TBool,
-        OfEqTy bA bB,
-        OfSupTy (MIf crit bA bB) bB] 
-        ++ type_constraint ct crit
-        ++ type_constraint ct bA
-        ++ type_constraint ct bB
+        let typeOfRet = TInfer . unsafePerformIO $ accC ct
+        in [TmOfTy crit TBool,
+            TmOfTy bA typeOfRet,
+            TmOfTy bB typeOfRet,
+            TmOfSupTy (MIf crit bA bB) typeOfRet] 
+            ++ type_constraint ct crit
+            ++ type_constraint ct bA
+            ++ type_constraint ct bB
 
     type_constraint ct (MSuc x) =
         [TmOfTy x TNat,
@@ -83,11 +83,12 @@ module TypeInfer where
             type_constraint ct f ++
             type_constraint ct x
     
-    type_constraint ct (MLet i bind body) =
-        let typeOfBind = TInfer . unsafePerformIO $ accC ct
+    type_constraint ct (MLet i typeOfBind bind body) =
+    let typeOfBody = TInfer . unsafePerformIO $ accC ct
         in [TmOfTy (TVar i) typeOfBind,
             TmOfTy bind typeOfBind,
-            OfSupTy (MLet i bind body) body] ++
+            TmOfTy body typeOfBody
+            TmOfSupTy (MLet i T bind body) typeOfBody] ++
             type_constraint ct bind ++
             type_constraint ct body
     
@@ -130,6 +131,36 @@ module TypeInfer where
         
 
     type_constraint ct (MSeq pre post) =
-        [OfSupTy (MSeq pre post) post] ++
+        let typeOfRet = unsafePerformIO $ accC ct
+        in [TmOfTy post typeOfRet,
+            TmOfSupTy (MSeq pre post) typeOfRet] ++
         type_constraint ct pre ++
         type_constraint ct post
+
+    repeat :: Integer -> (a -> a) -> (a -> a)
+    repeat 0 f = \x -> x
+    repeat n f = f . (rep (n-1) f)
+
+    simpl_constraint :: [TyEqu] -> [TyEqu]
+    simpl_constraint [] = []
+    simpl_constraint ((TmOfTy tm ty):sys) = 
+        (TmOfTy tm ty) : (simpl_constraint (substTmTy tm ty sys))
+        where substTmTy :: Tm -> Ty -> [TyEqu] -> [TyEqu]
+              substTmTy tm ty = repeat 4 (map (substTmTy' tm ty))
+              where substTmTy' :: Tm -> Ty -> TyEqu -> TyEqu
+                    substTmTy' tm ty (TmOfTy tm' ty') =
+                      if (tm == tm') then EqTy ty ty' else TmOfTy tm' ty'
+                    substTmTy' tm ty (TmOfSubTy tm1 ty1) =
+                        if (tm == tm1)
+                            then (SubTy ty ty1)
+                            else (TmOfSubTy tm1 ty1)
+                    substTmTy' tm ty (TmOfSupTy tm1 ty1) =
+                        if (tm == tm1)
+                            then (SupTy ty ty1)
+                            else (TmOfSupTy tm1 ty1)
+                    substTmTy' tm ty x = x
+
+    check_consistent :: [TyEqu] -> Bool
+
+
+                    
