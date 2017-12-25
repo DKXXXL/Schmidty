@@ -1,10 +1,8 @@
 module NameReassign where
 
     -- Resolve Name Confliction (Shadowing)
-    type Counter = IORef Integer
-    type AccCounter = IORef Integer -> IO Integer
+    
     type LexDict = Dict Id Id
-
     type LexTypeDict = Dict TyId TyId
 
     nameConflictResolution :: Tm -> Tm
@@ -60,10 +58,10 @@ module NameReassign where
     nameRes acc ct d (MCEQ a b) =
         MCEQ (nameRes acc ct d a) (nameRes acc ct d b)
     
-    nameRes acc ct d (MFun i T TO body) =
+    nameRes acc ct d (MFun i T body) =
         let ni = unsafePerformIO $ acc ct
         in let nd = addDict d i ni
-            in MFun ni T TO (nameRes acc ct nd body)
+            in MFun ni T (nameRes acc ct nd body)
     
     nameRes acc ct d (MApp f x) =
         MApp (nameRes acc ct d f) (nameRes acc ct x)
@@ -133,9 +131,8 @@ module NameReassign where
     typenameRes acc ct d (MCEQ a b) =
         MCEQ (typenameRes acc ct d a) (typenameRes acc ct d b)
 
-    typenameRes acc ct d (MFun i T TO body) =
-        MFun i (typeIdSubst d T) 
-            (typeIdSubst d TO) 
+    typenameRes acc ct d (MFun i T body) =
+        MFun i (typeIdSubst d T)
             (typenameRes acc ct d body)
 
     typenameRes acc ct d (MApp f x) =

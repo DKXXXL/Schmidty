@@ -68,11 +68,12 @@ module TypeInfer where
         type_constraint ct b
 
     -- lexical scoped, so type constraint not that trivial
-    type_constraint ct (MFun i T TO body) =
-        [TmOfSupTy (TVar i) T,
-         TmOfSubTy body TO,
-         TmOfTy (MFun i T TO body) (TFun T TO)] ++
-         type_constraint ct body
+    type_constraint ct (MFun i T body) =
+        let TO = TInfer . unsafePerformIO $ accC ct
+        in [TmOfSupTy (TVar i) T,
+            TmOfSubTy body TO,
+            TmOfTy (MFun i T body) (TFun T TO)] ++
+            type_constraint ct body
     
     type_constraint ct (MApp f x) = 
         let typeOfArg = TInfer . unsafePerformIO $ accC ct

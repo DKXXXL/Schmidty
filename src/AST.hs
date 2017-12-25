@@ -32,7 +32,7 @@ data Tm =
     | MNLT Tm Tm
     | MChr Integer
     | MCEQ Tm Tm 
-    | MFun Id Ty Ty Tm 
+    | MFun Id Ty Tm 
     | MApp Tm Tm 
     | MLet Id Ty Tm Tm
     | MTrue 
@@ -60,3 +60,12 @@ checkDict [] _ = Nothing
 addDict :: Dict k v -> k -> v -> Dict k v 
 addDict h a b = (a, b) : h
 
+
+type Counter = IORef Integer
+type AccCounter = IORef Integer -> IO Integer
+
+accumCounter ct = do {
+    ret <- readIORef ct;
+    atomicModifyIORef' ct (\x -> (x+1, x+1));
+    return ret
+}

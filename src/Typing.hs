@@ -85,7 +85,7 @@ has_type' tyd vd (MCEQ a b) =
             then Just TBool
             else Nothing
         }
-has_type' tyd vd (MFun i tyI tyO tm) =
+has_type' tyd vd (MFun i tyI tm) =
     (has_type' tyd (addDict vd i tyI) tm) 
         >>= (\tyO -> return (TFun tyI tyO))
 has_type' tyd vd (MApp f x) = 
@@ -172,8 +172,9 @@ tyListToProd (a : l) = TFun a (tyListToProd l)
 
 checkSubtyping :: CustomedTypeDict -> [(Id, Ty)] -> [(Id, Ty)] -> Bool 
 checkSubtyping _ subty [] = True 
-checkSubtyping typesInfo (a:b) (a':b') =
-    subtyOf a a' 
+checkSubtyping typesInfo ((n, a):b) ((n', a'):b') =
+    n == n'
+    && subtyOf a a' 
     && checkSubtyping b b'
 
 
