@@ -60,11 +60,19 @@ checkDict [] _ = Nothing
 addDict :: Dict k v -> k -> v -> Dict k v 
 addDict h a b = (a, b) : h
 
+dictLoc :: Dict k v -> k -> Maybe Integer
+dictLoc [] x = Nothing
+dictLoc ((a, b):d) x = 
+    if (a == x) then 0 else (1 + (dictLoc d x))
+
+dictLoc' d x = case dictLoc d x of Nothing -> error "Unfound value"
+                                   Just i -> i
+
 
 type Counter = IORef Integer
 type AccCounter = IORef Integer -> IO Integer
 
-accumCounter ct = do {
+accCt ct = do {
     ret <- readIORef ct;
     atomicModifyIORef' ct (\x -> (x+1, x+1));
     return ret
