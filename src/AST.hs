@@ -49,6 +49,8 @@ data Tm =
     --- Depth Subtyping
     | MField Ty Id
     | MSeq Tm Tm 
+    --- After Parsing, auto addition
+    | MCallFix Id
     deriving (Show, Eq)
 
 type Dict k v = [(k, v)]

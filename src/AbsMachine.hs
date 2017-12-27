@@ -2,6 +2,7 @@ module AbsMachine where
     
     type Register = Integer
     type Envloc = Integer
+    
 
     data Value =
         | VNone
@@ -11,7 +12,9 @@ module AbsMachine where
         | VVar Envloc
         | VField Ty Id
         | VConstructor TyId
-        | VLabel Integer
+        --- Construct a closure with Integer as label name
+        --- Envloc as the environment with closure, with Envloc back
+        | VClosure Integer Envloc
 
     data MachL =
         | SetRegReg Register Register

@@ -105,6 +105,8 @@ module CPS where
             (cps bind ibindx) 
             (ECont ibindi' (TFLet i ty ibindx' bodyTF))
     
+    
+
     cps (MTrue) kont =
         TFApp kont ETrue
     
@@ -153,3 +155,6 @@ module CPS where
         in let x = ECVar xc
                xi = Cont xc
         in TFSeq (cps pre (ECont xi x)) (cps post kont)
+
+    cps (MCallFix i) kont =
+        TFFixC (EVar i) kont

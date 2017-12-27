@@ -14,13 +14,16 @@ module NameReassign where
         }
 
     tynameConflictResolution :: Tm -> Tm
-    nameConflictResolution = 
+    tynameConflictResolution = 
         typenameRes accum (unsafePerformIO $ newIORef 0) []
         where accum = do {
             ret <- readIORef ct;
             atomicModifyIORef' ct (\x -> (x+1, x+1));
             return ret
         }
+
+    decorateFixCall :: Tm -> Tm
+    decorateFixCall = recurMention []
 
     nameReassign :: AccCounter -> Integer -> Tm -> Tm
     
@@ -169,6 +172,63 @@ module NameReassign where
     typenameRes acc ct d (MSeq pre past) =
         MSeq (typenameRes acc ct d pre) (typenameRes acc ct d post)
 
+    exists :: a -> [a] -> Bool
+    exists _ [] = False
+    exists a (b : s) = a == b || (exists a s)
+
+    remove :: a -> [a] -> [a]
+    remove x= filter (/= x)
 
 
+
+    recurMention :: [Id] -> Tm -> Tm
+    recurMention s (MIf a b c) =
+        MIf (recurMention s a) (recurMention s b) (recurMention s c)
+    
+    recurMention s (MVar i) =
+        if (exists i s) then MCallFix i else (MVar i)
+
+    recurMention s (MSuc a) =
+        MSuc (recurMention s a)
+    
+    recurMention s (MNGT a b) =
+        MNGT (recurMention s a) (recurMention s b)
+    
+    recurMention s (MNEQ a b) =
+        MNEQ (recurMention s a) (recurMention s b)
+    
+    recurMention s (MNLT a b) =
+        MNLT (recurMention s a) (recurMention s b)
+
+    recurMention s (MFun i T body) =
+        MFun i T (recurMention (remove i s) body)
+
+    recurMention s (MApp a b) =
+        MApp (recurMention s a) (recurMention s b)
+
+    recurMention s (MLet i T bind body) =
+        MLet i T (recurMention (i : s) bind) (recurMention s body)
+        
+    recurMention s (MBEQ a b) =
+        MBEQ (recurMention s a) (recurMention s b)
+
+    recurMention s (MLeft l r) =
+        MLeft (recurMention s l) r
+    
+    recurMention s (MRight l r) =
+        MRight l (recurMention s r)
+
+    recurMention s (MCase x l r) =
+        MCase (recurMention s x) (recurMention s l) (recurMention s r)
+
+    recurMention s (MLetRcd cons ty suty rcd body) =
+        MLetRcd cons ty suty rcd (recurMention s body)
+
+    recurMention s (MSeq a b) =
+        MSeq (recurMention s a) (recurMention s b)
+
+    recurMention s x = x
+    
+
+    
 
