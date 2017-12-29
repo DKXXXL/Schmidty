@@ -1,56 +1,85 @@
 module AbsMachine where
     
-    type Register = Integer
-    type Envloc = Integer
+    data ABSS = ABSS {
+        LABELNO :: Integer,
+        FUNS :: [MLabel]
+    } deriving (Show, Eq) 
+    type ABSM = State ABSS
+
+
+    accLabel :: Integer -> ABSM ()
+    accLabel x = modify $ \absm -> absm {LABELNO = labelno + x}
+
+    addnewfun :: [MachL] -> ABSM Integer
+    addnewfun f = do {
+        labelnow <- gets LABELNO;
+        funs <- gets FUNS;
+        modify $ \absm -> absm {
+            LABELNO = labelnow + 1,
+            FUNS = (MLabel labelnow f):funs
+            };
+        return labelnow
+    }
+
+    mapValueToReg :: [Value] -> [Integer] -> [MachL]
+    mapValueToReg (a : as) (b:bs) =
+        (SetReg (reg b) a) : (mapValueToReg as bs)
+
     
 
-    type Entrance = Integer
-    type Exit = Integer
-    --- Both Label Name
+    machl :: TForm -> ABSM [MachL]
+    machl (TFIf crit tb fb) =
+        do {
+        crit' <- machl' crit;
+        tb' <- machl tb;
+        fb' <- machl fb;
+        labeltrue <- addnewfun tb';
+        labelfalse <- addnewfun fb';
+        return $
+        (mapValueToReg [crit', VClosure labeltrue 0, VClosure labelfalse 0]
+                       [1, 2, 3]) ++
+        [IFJUMP (reg 1) (reg 2) (reg 3)]
+        }
+    machl (TFSuc x cont) =
+        do {
+            x' <- machl' x;
+            cont' <- machl' 
+        }
 
-    data Value =
-        | VNone
-        | VZero
-        | VTrue
-        | VFalse
-        | VVar Envloc
-        | VField Ty Id
-        | VConstructor TyId
-        --- Construct a closure with Integer as label name
-        --- Envloc as the environment with closure, with Envloc back
-        | VClosure Integer Envloc
-        | VContStack Entrance Exit [Exit]
-        --- Responsible for the evaluation of letrec
 
+
+    machl' :: EForm -> ABSM Value
+    machl' ENone = return VNone
+    machl' (EVar i) = return VVar i
+    machl' (ECVar _) = error "Not Supposed to find ECVAR"
+    machl' EZero = return VZero
+    machl' ETrue = return VTrue
+    machl' EFalse = return VFalse
+    machl' (EFunc i cont ty body) =
+        do {
+            funbody <- machl body
+            let bodywithInit = 
+                [AddEnv 2,
+                 SetEnvReg 0 2,
+                 SetEnvReg 1 1] 
+                ++ funbody
+            labelnow <- addnewfun bodywithInit
+            return $ VClosure labelnow 0
+        }
+
+    machl' (ECont cont body) = 
+        do {
+            funbody <- machl body
+            let bodywithInit = 
+                [AddEnv 1,
+                 SetEnvReg 0 1] 
+                ++ funbody
+            labelnow <- addnewfun bodywithInit
+            return $ VClosure labelnow 0
+        }
+
+    machl' (EField )
     
-
-    data MachL =
-        | SetRegReg Register Register
-        | SetRegEnv Register Envloc
-        | SetEnvReg Envloc Register
-        | SetEnvEnv Envloc Envloc
-        | SetReg Register Value
-        | SetEnv Envloc Value
-        | AddEnv Integer
-        --- Internal Func
-        | DESTRU Register Register
-        --- Destruct for Sum
-        | SUC
-        | NGT
-        | NEQ
-        | NLT
-        | CEQ
-        | BEQ
-        | LEFT
-        | RIGHT
-        --- Application
-        | APP
-        --- Control Flow
-        | IF Register Register Register
-        | LEFTTHENJUMP Register Register
-
-    data MLabel = MLabel Integer [MachL]
-
 
     
 
