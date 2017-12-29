@@ -4,6 +4,10 @@ module AbsMachine where
     type Envloc = Integer
     
 
+    type Entrance = Integer
+    type Exit = Integer
+    --- Both Label Name
+
     data Value =
         | VNone
         | VZero
@@ -15,6 +19,10 @@ module AbsMachine where
         --- Construct a closure with Integer as label name
         --- Envloc as the environment with closure, with Envloc back
         | VClosure Integer Envloc
+        | VContStack Entrance Exit [Exit]
+        --- Responsible for the evaluation of letrec
+
+    
 
     data MachL =
         | SetRegReg Register Register
@@ -24,7 +32,6 @@ module AbsMachine where
         | SetReg Register Value
         | SetEnv Envloc Value
         | AddEnv Integer
-        | LABEL Integer
         --- Internal Func
         | DESTRU Register Register
         --- Destruct for Sum
@@ -41,6 +48,8 @@ module AbsMachine where
         --- Control Flow
         | IF Register Register Register
         | LEFTTHENJUMP Register Register
+
+    data MLabel = MLabel Integer [MachL]
 
 
     

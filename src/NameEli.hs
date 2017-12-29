@@ -4,8 +4,8 @@ module NameEli where
 
 
     nameEli' :: UniLexi -> EForm -> EForm
-    nameEli' c (EVar i) = dictLoc' c (NId i)
-    nameEli' c (ECVar i) = dictLoc' c (CId i)
+    nameEli' c (EVar i) = EVar $ dictLoc' c (NId i)
+    nameEli' c (ECVar i) = EVar $ dictLoc' c (CId i)
     nameEli' c (EFunC i (Cont j) T body) =
         let c' = addDict (addDict c (CId j) 0) (NId i) 0
         in EFunC 1 (Cont 0) T (nameEli c' body)
@@ -24,4 +24,9 @@ module NameEli where
         TFSuc (nameEli' c x) (nameEli' c cont)
     
     nameEli c (TFNGT a b cont) =
-        
+        TFNGT (nameEli' c a) (nameEli' c b) (nameEli' c cont)
+
+    nameEli c (TFNEQ a b cont) =
+        TFNEQ (nameEli' c a) (nameEli' c b) (nameEli' c cont)
+
+    

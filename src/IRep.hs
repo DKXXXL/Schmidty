@@ -24,7 +24,9 @@ module IRep where
         | TFApp EForm EForm 
         | TFAppc EForm EForm EForm
         | TFixApp Id Cont TForm EForm
+        -- 
         | TFFixC EForm EForm 
+        --
         | TFLet Id Ty EForm TForm
         | TFBEQ EForm EForm EForm
         | TFLeft EForm EForm
