@@ -45,6 +45,9 @@ module IRep where
     type Exit = Integer
     --- Both Label Name
 
+    type Env = Register
+    --- Environment Pointer
+
     data Value =
         | VNone
         | VZero
@@ -56,8 +59,9 @@ module IRep where
         --- Construct a closure with Integer as label name
         --- Envloc as the environment with closure, with Envloc back
         | VClosure Integer Envloc
-        | VContStack Entrance Exit [Exit]
+        | VContStack Env Entrance Value [Value]
         --- Responsible for the evaluation of letrec
+        --- Here 'Value' must be the VClosure
 
     
 
@@ -68,10 +72,13 @@ module IRep where
         | SetEnvEnv Envloc Envloc
         | SetReg Register Value
         | SetEnv Envloc Value
+        | SetEnvPt Envloc
+        --- move up pointer to upper 'Envloc'
+        | EnvptToReg Register
+        | RegToEnvpt Register
+        --- Save envpt to register and vice versa
         | AddEnv Integer
         --- Internal Func
-        | DESTRU Register Register
-        --- Destruct for Sum
         | SUC
         | NGT
         | NEQ
@@ -84,7 +91,19 @@ module IRep where
         | APP
         --- Control Flow
         | IFJUMP Register Register Register
-        | CASEJUMP Register Register Register
+        | CASEJUMP Register Register Register Register
+        --- About Evaluation of fixpoint
+        | JUMPBACKCONT Envloc
+        --- JUMPBACKCONT is different from below two
+        --- Below two still have to work even 
+        ----- the evaluation of binding finishes
+        ----- So GOTOEVALBIND is actually doing differently if envloc has a 
+        ----- VContStack and not have one
+        | GOTOEVALBIND Envloc
+        ----- ADDCONTSTACKIFEXIST will add register into stack of
+        ----- envloc if stack is there, or do nothing
+        | ADDCONTSTACKIFEXIST Envloc Register
+
 
     data MLabel = MLabel Integer [MachL]
     
