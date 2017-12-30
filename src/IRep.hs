@@ -62,6 +62,7 @@ module IRep where
         | VContStack Env Entrance Value [Value]
         --- Responsible for the evaluation of letrec
         --- Here 'Value' must be the VClosure
+        deriving (Show, Eq)
 
     
 
@@ -97,12 +98,14 @@ module IRep where
         --- JUMPBACKCONT is different from below two
         --- Below two still have to work even 
         ----- the evaluation of binding finishes
-        ----- So GOTOEVALBIND is actually doing differently if envloc has a 
+        ----- So GOTOEVALBIND is actually doing differently 
+        ----- if envloc has a 
         ----- VContStack and not have one
-        | GOTOEVALBIND Envloc
+        | GOTOEVALBIND Envloc Register
         ----- ADDCONTSTACKIFEXIST will add register into stack of
         ----- envloc if stack is there, or do nothing
         | ADDCONTSTACKIFEXIST Envloc Register
+        deriving (Show, Eq)
 
 
     data MLabel = MLabel Integer [MachL]
