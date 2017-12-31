@@ -9,3 +9,4 @@ Forked from Emesch.
   * LLVM supported debugging info
   * Formally verified interpreter, for checking the soundness of this language
   * A light interpreter on web
+  * A Sound and Strong Type Inference
