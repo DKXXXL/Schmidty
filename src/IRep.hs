@@ -91,8 +91,8 @@ module IRep where
         --- Application
         | APP
         --- Control Flow
-        | IFJUMP Register Register Register
-        | CASEJUMP Register Register Register Register
+        | IFJUMP
+        | CASEJUMP
         --- About Evaluation of fixpoint
         | JUMPBACKCONT Envloc
         --- JUMPBACKCONT is different from below two

@@ -31,20 +31,38 @@ module ToLLVM where
     retType :: Type
     retType = VoidType
 
+    pType :: Type -> Type
+    pType = flip PointerType (AddrSpace 0)
+
+    generalObjType :: Type
+    generalObjType = 
+        StructureType False [(IntegerType machinebit), 
+                             (pType (IntegerType machinebit))]
+
+    goTy = generalObjType
+
     regType :: Type
+    regType = goTy
 
+    machinebit :: Word32
 
-    reg :: Integer -> Operand
-    reg x = 
+    regPt :: Integer -> Operand
+    regPt x = 
         ConstantOperand . 
-        GlobalDefinition regType . 
+        GlobalDefinition (pType regType) . 
         mkName . ("regPt" ++) $ show i
 
-    envpt :: Operand
-    envpt =
+    constantReg :: Value -> Operand
+    constantReg =
+        ConstantOperand .
+        GlobalDefinition (regType) .
+        mkName . show
+
+    envptpt :: Operand
+    envptpt =
         ConstantOperand . 
-        GlobalDefinition regType . 
-        mkName . ("envPt") 
+        GlobalDefinition (pType goTy) . 
+        mkName . ("envPtPt") 
 
     addDefn :: Definition -> LLVM ()
     addDefn d = do {
@@ -54,10 +72,10 @@ module ToLLVM where
 
 
 
-    defFun :: [BasicBlock] -> LLVM ()
-    defFun blks = addDefn . 
+    defFun :: String -> [BasicBlock] -> LLVM ()
+    defFun name blks = addDefn $ 
         GlobalDefinition $ functionDefaults {
-            name = Name "entry"
+            name = Name name
             , parameters = []
             , returnType = retType
             , basicBlocks = blks
@@ -65,14 +83,32 @@ module ToLLVM where
 
     external ::  Type -> String -> [(Type, Name)] -> LLVM ()
     external retty label argtys = addDefn $
-    GlobalDefinition $ functionDefaults {
-    name        = Name label
-    , linkage     = L.External
-    , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
-    , returnType  = retty
-    , basicBlocks = []
-    }
+        GlobalDefinition $ functionDefaults {
+        name        = Name label
+        , linkage     = L.External
+        , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
+        , returnType  = retty
+        , basicBlocks = []
+        }
 
+
+    callinternalFunWithArg :: Type -> String -> [Operand] -> Codegen Operand
+    callinternalFunWithArg ty x args =
+        instr $ Call (Just Tail) CC.C [] (Right fn) args' [] []
+        where fn :: Operand
+              fn = ConstantOperand . 
+                    GlobalReference ty . 
+                    mkName $ x
+              args' = map (\x -> (x, [])) args
+    
+    callinternalFun :: String -> Codegen Operand
+    callinternalFun x = 
+        instr $ Call Nothing CC.C [] (Right fn) [] [] []
+        where fn :: Operand
+              fn = ConstantOperand . 
+                    GlobalReference retType . 
+                    mkName $ x
+    
     internalFunNames :: [String]
     internalFunNames = 
         ["prevEnvpt", 
@@ -91,11 +127,17 @@ module ToLLVM where
          "CASEJUMP",
          "JUMPBACKCONT",
          "GOTOEVALBIND",
-         "ADDCONTSTACKIFEXIST" ]
+         "ADDCONTSTACKIFEXIST",
+         "fieldExtract",
+         "constructorOfRecord",
+         "closureCons"]
 
-    internalFuns = 
+    
+    
+
 
     externFun = external retType "entry" []
+    
 
     fresh :: Codegen Word
     fresh = do {
@@ -105,7 +147,7 @@ module ToLLVM where
     }
 
     instr :: Instruction -> Codegen (Operand)
-    instr ins = do{
+    instr ins = do {
       n <- fresh
       let ref = (UnName n)
       blk <- gets block
@@ -120,21 +162,76 @@ module ToLLVM where
     load :: Operand -> Codegen Operand
     load ptr = instr $ Load False ptr Nothing 0 []
 
+    addEnv :: Integer -> Codegen Operand
+    addEnv 1 = callinternalFun "addEnv"
+    addEnv n = 
+        callinternalFun "addEnv" >> addEnv (n - 1)
     
 
     getPtToEnvloc :: Envloc -> Codegen Operand
-    getPtToEnvloc 0 = return $ envpt
+    getPtToEnvloc 0 = load envptpt
     getPtToEnvloc n = do {
         spt <- getPtToEnvloc (n - 1)
-
+        callinternalFunWithArg (pType goTy) "prevEnvpt" [spt]
         }
-        where prevEnvpt :: Instruction
-              prevEnvpt = 
 
-    callInternalFunc :: String 
+    setEnvContentToPt :: Operand -> Operand -> Codegen Operand
+    setEnvContentToPt content ptr =
+        callinternalFunWithArg VoidType "setEnvContentToPt" [content, ptr]
+
+    extractEnvContentFromPt :: Operand -> Codegen Operand
+    extractEnvContentFromPt x = 
+        callinternalFunWithArg (goTy) "extractEnvContentFromPt" [x]
+
+    getEnvContentFromEnvloc x = 
+        getPtToEnvloc x >>= extractEnvContentFromPt
+    
+    setEnvContentToEnvloc content x =
+        getPtToEnvloc x >>= (setEnvContentToPt content)
+
+
+    cint :: Integer -> Operand
+    cint = ConstantOperand . Int machinebit
 
     cgenValue :: Value -> Codegen (Operand)
-    cgenValue 
+    cgenValue (VVar i) = do
+        envContent <- getEnvContentFromEnvloc i
+        
+    cgenValue (VField (TVar tyid) id) = 
+        callinternalFunWithArg (goTy) "fieldExtract" [cint tyid, cint id]
+    cgenValue (VConstructor tyid) =
+        callinternalFunWithArg (goTy) "constructorOfRecord" [cint tyid]
+    cgenValue (VClosure labelno envloc) =
+        callinternalFunWithArg (goTy) "closureCons" [labelnof, cint envloc]
+        where labelnof = 
+            ConstantOperand .
+            GlobalReference (FunctionType retType [] False) .
+            mkName . ("LABEL" ++ ) $ labelno
+    cgenValue (VContStack regnum entry out _) = do
+        out' <- cgenValue out
+        callinternalFunWithArg goTy "initContStack" [regnum', labelOfEntry, out']
+        where labelOfEntry = 
+            ConstantOperand .
+            GlobalReference (FunctionType retType [] False) .
+            mkName . ("LABEL" ++ ) $ entry
+              regnum' = 
+                ConstantOperand . 
+                Int machinebit regnum
+
+    cgenValue x = return . constantReg $ x
+
+    tcall :: Integer -> String -> Codegen ()
+    tcall n x = 
+        init n >>= \args -> instr $ Call (Just Tail) CC.C [] (Right x') args [] []
+        where init 0 = return []
+              init n = do 
+                l <- init (n - 1)
+                t <- load $ regPt n
+                return (l ++ [t])
+              argsTys = map snd . zip [1..n] . repeat $ goTy
+              x' = ConstantOperand . 
+                   GlobalReference (FunctionType retType argsTys False) .
+                   mkName . show $ x
 
     cgenStatement :: MachL -> Codegen ()
     cgenStatement (SetRegReg r1 r2) = do {
@@ -142,5 +239,82 @@ module ToLLVM where
         j <- store (regPt 1) i
     }
 
-    cgenStatement (SetRegEnv)
+    cgenStatement (SetRegEnv r1 envloc) = do {
+        envContent <- getEnvContentFromEnvloc envloc
+        store (regPt r1) envContent
+    }
 
+    cgenStatement (SetEnvReg envloc r1) = do {
+        i <- load (regPt r1)
+        setEnvContentToEnvloc i envloc
+    }
+
+    cgenStatement (SetEnvEnv a b) = do {
+        envContent <- getEnvContentFromEnvloc b
+        setEnvContentToEnvloc envContent a
+    }
+
+    cgenStatement (SetReg r1 v) = do {
+        got <- cgenValue v
+        store (regPt r1) got
+    }
+
+    cgenStatement (SetEnv envloc v) = do {
+        got <- cgenValue v
+        setEnvContentToEnvloc got envloc
+    }
+
+    cgenStatement (SetEnvPt envloc) = do {
+        newPtPtEnv <- getPtToEnvloc envloc
+        newPtEnv <- load newPtPtEnv
+        store envptpt newPtEnv
+    }
+
+    cgenStatement (EnvptToReg r1) = do {
+        ptEnv <- load envptpt
+        store (regPt r1) ptEnv
+    }
+
+    cgenStatement (RegToEnvpt r1) = do {
+        ptEnv <- load (regPt r1)
+        store envptpt ptEnv
+    }
+
+    cgenStatement (AddEnv i) = addEnv i
+    
+    cgenStatement APP = 
+        load (regPt 0) >>= 
+            \f -> callinternalFunWithArg retType "APP" [f]
+
+    cgenStatement (JUMPBACKCONT i) = do {
+        envContent <- getEnvContentFromEnvloc i
+        callinternalFunWithArg retType "JUMPBACKCONT" [envContent]
+    }
+
+    cgenStatement (GOTOEVALBIND i r1) = do {
+        envContent <- getEnvContentFromEnvloc i
+        rct <- load $ regPt r1
+        callinternalFunWithArg retType "GOTOEVALBIND" [envContent, rct]
+    }
+
+    cgenStatement (ADDCONTSTACKIFEXIST i r1) = do {
+        envContent <- getEnvContentFromEnvloc i
+        rct <- load $ regPt r1
+        callinternalFunWithArg retType "ADDCONTSTACKIFEXIST" [envContent, rct]
+    }
+
+    cgenStatement x = 
+        tcall nx x
+        where nx = snd . head . filter (== x) $ internalFlist
+              internalFlist = 
+                [(SUC, 2),
+                 (NGT, 3),
+                 (NEQ, 3),
+                 (NLT, 3),
+                 (CEQ, 3),
+                 (BEQ, 3),
+                 (LEFT, 2),
+                 (RIGHT, 2)
+                 (IFJUMP, 3),
+                 (CASEJUMP, 4)
+                ]

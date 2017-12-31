@@ -59,7 +59,7 @@ module AbsMachine where
                         VClosure labeltrue 0, 
                         VClosure labelfalse 0]
                        [1, 2, 3]) ++
-        [IFJUMP (reg 1) (reg 2) (reg 3)]
+        [IFJUMP]
         }
     
     machl (TFSuc x cont) =
@@ -161,7 +161,7 @@ module AbsMachine where
     machl (TFCase x lf rf cont) =
         do {
             init <- mapEFormToRegs [x, lf, rf, cont] [1, 2, 3, 4];
-            return (init ++ [CASEJUMP (reg 1) (reg 2) (reg 3) (reg 4)])
+            return (init ++ [CASEJUMP])
         }
 
     machl (TFLetRcd cons ty suty rcd body) =
