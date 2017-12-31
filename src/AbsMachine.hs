@@ -184,6 +184,7 @@ module AbsMachine where
     machl' (EVar i) = return VVar i
     machl' (ECVar _) = error "Not Supposed to find ECVAR"
     machl' EZero = return VZero
+    machl' (EInt i) = return $ VInt i
     machl' ETrue = return VTrue
     machl' EFalse = return VFalse
     machl' (EFunc i cont ty body) =

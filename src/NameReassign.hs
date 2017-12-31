@@ -1,5 +1,6 @@
 module NameReassign where
 
+    import AST
     -- Resolve Name Confliction (Shadowing)
     
     type LexDict = Dict Id Id
@@ -43,6 +44,9 @@ module NameReassign where
     
     nameRes acc ct d (MZero) =
         MZero
+
+    nameRes acc ct d (MInt i) =
+        MInt i
     
     nameRes acc ct d (MSuc x) =
         MSuc (nameRes acc ct d x)

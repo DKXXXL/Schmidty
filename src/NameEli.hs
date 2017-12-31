@@ -1,4 +1,7 @@
 module NameEli where
+
+    import IRep
+
     data UniId = NId Id | CId Id deriving (Show, Eq)
     type UniLexi = Dict UniId Integer
 

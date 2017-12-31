@@ -1,5 +1,7 @@
 module ToLLVM where
 
+
+    import IRep
     import LLVM.AST
 
     ---- Reference : Implementing a JIT 
@@ -165,28 +167,31 @@ module ToLLVM where
                     GlobalReference retType . 
                     mkName $ x
     
-    internalFunNames :: [String]
+    internalFunNames :: [String, Type, [(Type, String)]]
     internalFunNames = 
-        ["prevEnvpt", 
-         "addEnv",
-         "SUC",
-         "NGT",
-         "NEQ",
-         "NLT",
-         "CEQ",
-         "CEQ",
-         "BEQ",
-         "LEFT",
-         "RIGHT",
-         "APP",
-         "IFJUMP",
-         "CASEJUMP",
-         "JUMPBACKCONT",
-         "GOTOEVALBIND",
-         "ADDCONTSTACKIFEXIST",
+        [("prevEnvpt", (pType goTy), [(pType goTy), "pt"]),
+         ("addEnv", VoidType, [])
+         ("SUC", VoidType, [((goTy), "x"), (goTy, "cont")])
+         ("NGT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
+         ("NEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
+         ("NLT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
+         ("CEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
+         ("BEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
+         ("LEFT", VoidType, [((goTy), "x"), (goTy, "cont")])
+         ("RIGHT", VoidType, [((goTy), "x"), (goTy, "cont")])
+         ("APP", VoidType, [((goTy), "x"), (goTy, "cont")])
+         ("IFJUMP", VoidType, [((goTy), "crit"),(goTy, "tb"),(goTy, "fb")])
+         ("CASEJUMP", VoidType, [((goTy), "crit"),(goTy, "lb"),(goTy, "rb"), (goTy, "cont")])
+         ("JUMPBACKCONT", VoidType, [((goTy), "fixinfo")])
+         ("GOTOEVALBIND", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")])
+         ("ADDCONTSTACKIFEXIST", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")])
+         ("constInteger", goTy, [(IntegerType machinebit), ]
          "fieldExtract",
          "constructorOfRecord",
-         "closureCons"]
+         "closureCons",
+         "initContStack",
+         "setEnvContentToPt",
+         "extractEnvContentFromPt"]
 
     
     store :: Operand -> Operand -> Codegen Operand
@@ -229,7 +234,8 @@ module ToLLVM where
     cgenValue :: Value -> Codegen (Operand)
     cgenValue (VVar i) = do
         envContent <- getEnvContentFromEnvloc i
-        
+    cgenValue (VInt i) =
+        callinternalFunWithArg (goTy) "constInteger" [cint i]
     cgenValue (VField (TVar tyid) id) = 
         callinternalFunWithArg (goTy) "fieldExtract" [cint tyid, cint id]
     cgenValue (VConstructor tyid) =

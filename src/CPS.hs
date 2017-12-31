@@ -1,5 +1,6 @@
 module CPS where
-
+    import AST
+    import IRep
 
 
     type Kont = EForm
@@ -25,6 +26,9 @@ module CPS where
     
     cps (MZero) kont = 
         (TFApp kont (EZero))
+    
+    cps (MInt i) kont =
+        (TFApp kont (EInt i))
     
     cps (MSuc a) kont =
         let xc = unsafePerformIO $ accCt ct 

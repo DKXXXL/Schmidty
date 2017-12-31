@@ -6,6 +6,7 @@ module IRep where
         | EVar Id
         | ECVar Id
         | EZero
+        | EInt Integer
         | ETrue
         | EFalse
         | EFunC Id Cont Ty TForm
@@ -51,6 +52,7 @@ module IRep where
     data Value =
         | VNone
         | VZero
+        | VInt Integer
         | VTrue
         | VFalse
         | VVar Envloc

@@ -30,11 +30,13 @@ data Tm =
     | MNGT Tm Tm 
     | MNEQ Tm Tm
     | MNLT Tm Tm
+    | MInt Integer
     | MChr Integer
     | MCEQ Tm Tm 
     | MFun Id Ty Tm 
     | MApp Tm Tm 
     | MLet Id Ty Tm Tm
+    | MLetExt Id Ty Tm
     | MTrue 
     | MFalse
     | MBEQ Tm Tm 

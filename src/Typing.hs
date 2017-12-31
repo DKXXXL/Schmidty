@@ -1,5 +1,7 @@
 module Typing where
 
+    import AST
+
 type RecordInfo = (Ty* [(Id* Ty)])
 type CustomedTypeDict = Dict TyId RecordInfo 
 -- type TypeAliases = Dict TyId Ty
@@ -42,6 +44,7 @@ has_type' tyd vd (MIf crit bA bB) =
 
 has_type' tyd vd (MVar id) = checkDict vd id 
 has_type' _ _ MZero = Just TNat
+has_type' _ _ (MInt _) = Just TNat
 has_type' tyd vd (MSuc n) = 
     if (has_type' tyd vd n == Just TNat)
     then Just TNat 
@@ -94,13 +97,13 @@ has_type' tyd vd (MApp f x) =
         fT <- tyInCtx f;
         xT <- tyInCtx x;
         case fT of (TFun tyI tyO) ->
-            if (tyI == xT) then Just tyO else Nothing
+            if (subtyOf xT tyI) then Just tyO else Nothing
     }
 
 has_type' tyd vd (MLet i T bind body) =
     let newd = addDict vd i T
     in (has_type' tyd newd bind) 
-        >>= (\bindty -> if (bindty == T) then has_type' tyd newd body else Nothing)
+        >>= (\bindty -> if (subtyOf bindty T) then has_type' tyd newd body else Nothing)
 
 has_type' _ _ MTrue =
     Just TBool
@@ -135,8 +138,10 @@ has_type' tyd vd (MCase crit bA bB) =
         case critia of (TSum LT RT) ->
             case tybA of (TFun IT OT) ->
                 case tybB of (TFun IT' OT') ->
-                  if((LT == IT) && (RT == IT') && (OT == OT'))
-                    then Just OT 
+                  if((LT == IT) && (RT == IT'))
+                    then if (OT `subtyOf` OT') then Just OT'
+                            if (OT' `subtyOf` OT) then Just OT
+                                else Nothing
                     else Nothing
                             _ -> Nothing
                          _ -> Nothing
