@@ -11,21 +11,59 @@ module ToLLVM where
     newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
         deriving (Functor, Applicative, Monad, MonadState CodegenState )
 
+    
+
+    toLLVMAsm :: [MLabel] -> IO ByteString
+    toLLVMAsm labels =
+        withContext $ \context ->
+            liftError $ withModuleFromAST context asts $ \m -> do
+              llstr <- moduleLLVMAssembly m
+              return llstr
+        where asts = toLLVMModule labels
+
+    toLLVMModule :: [MLabel] -> (AST.Module)
+    toLLVMModule labels = allAst
+        where labels' = reverse $ sort labels
+              --- tollvm :: LLVM ()
+              tollvm' = (mapM toFun labels') 
+              allAst :: AST.Module
+              allAst = 
+                let (LLVM tollvm) = tollvm'
+                in execState tollvm emptyASTModule
+              emptyASTModule = defaultModule { moduleName = "entrance"}
+
+
+
+    toFun :: MLabel -> LLVM ()
+    toFun (MLabel labelNo absMinss) =
+        defFun ("LABEL" ++ (show labelno)) [llvmInssInBlock]
+        where llvmInss :: Codegen [()]
+              (Codegen llvmInss) = 
+                mapM cgenStatement absMinss
+              llvmInssInBlock :: BasicBlock
+              llvmInssInBlock = 
+                BasicBlock labelName codeInblock (Just (Ret Nothing))
+                where labelName :: Name
+                      labelName = mkName "entry"
+                      codeInblock :: [Named Instruction]
+                      codeInblock = reverse . stack .block $ generatedCode
+                      generatedCode :: CodegenState
+                      generatedCode = execState (runCodegen llvmInss) emptyCode
+                      emptyCode :: CodegenState
+                      emptyCode = CodegenState (BlockState []) 1
+
 
     type SymbolTable = [(String, Operand)]
 
     data CodegenState
     = CodegenState {
     block        :: BlockState  -- Blocks for function
-    , symtab       :: SymbolTable              -- Function scope symbol table
     , count        :: Word                     -- Count of unnamed instructions
     } deriving Show
 
     data BlockState
     = BlockState {
-    idx   :: Int                            -- Block index
-    , stack :: [Named Instruction]            -- Stack of instructions
-    , term  :: Maybe (Named Terminator)       -- Block terminator
+    stack :: [Named Instruction]            -- Stack of instructions
     } deriving Show
 
     retType :: Type
@@ -64,6 +102,8 @@ module ToLLVM where
         GlobalDefinition (pType goTy) . 
         mkName . ("envPtPt") 
 
+    
+
     addDefn :: Definition -> LLVM ()
     addDefn d = do {
         defs <- gets moduleDefinition
@@ -91,7 +131,23 @@ module ToLLVM where
         , basicBlocks = []
         }
 
+    fresh :: Codegen Word
+    fresh = do {
+        i <- gets count
+        modify $ \s -> s {count = i + 1}
+        return i
+    }
 
+    instr :: Instruction -> Codegen (Operand)
+    instr ins = do {
+      n <- fresh
+      let ref = (UnName n)
+      blk <- gets block
+      let i = stack blk
+      modifyBlock (blk { stack = (ref := ins) : i } )
+      return $ local ref
+      }
+    
     callinternalFunWithArg :: Type -> String -> [Operand] -> Codegen Operand
     callinternalFunWithArg ty x args =
         instr $ Call (Just Tail) CC.C [] (Right fn) args' [] []
@@ -133,29 +189,6 @@ module ToLLVM where
          "closureCons"]
 
     
-    
-
-
-    externFun = external retType "entry" []
-    
-
-    fresh :: Codegen Word
-    fresh = do {
-        i <- gets count
-        modify $ \s -> s {count = i + 1}
-        return i
-    }
-
-    instr :: Instruction -> Codegen (Operand)
-    instr ins = do {
-      n <- fresh
-      let ref = (UnName n)
-      blk <- gets block
-      let i = stack blk
-      modifyBlock (blk { stack = (ref := ins) : i } )
-      return $ local ref
-      }
-
     store :: Operand -> Operand -> Codegen Operand
     store ptr val = instr $ Store False ptr val Nothing 0 []
     

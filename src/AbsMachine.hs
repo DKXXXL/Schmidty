@@ -31,13 +31,13 @@ module AbsMachine where
     
     mapEFormToRegs :: [EForm] -> [Integer] -> ABSM [MachL]
     mapEFormToRegs eforms regs = 
-        liftM (flip mapValueToRegs regs) $ connectState states
-        where connectState :: [ABSM EForm] -> ABSM [EForm]
+        (flip mapValueToRegs regs). mapM machl' $ eforms
+     {-  where connectState :: [ABSM EForm] -> ABSM [EForm]
               connectState [] = return []
               connectState (x:xs) = 
                 x >>= (\x' -> connectState xs >>= \xs' -> return (x':xs'))
               states :: [ABSM EForm]
-              states = map machl' eforms
+              states = map machl' eforms -}
     mapValueToRegs :: [Value] -> [Integer] -> [MachL]
     mapValueToRegs = (map (\(x,y) -> mapValueToReg)) . zip
 

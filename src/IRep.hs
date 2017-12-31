@@ -109,7 +109,10 @@ module IRep where
 
 
     data MLabel = MLabel Integer [MachL]
-    
+
+    instance Ord MLabel where
+        (MLabel i _) `compare` (MLabel j _) = i `compare` j
+
     reg :: Integer -> Register
     reg x = x
 
