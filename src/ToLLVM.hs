@@ -38,21 +38,27 @@ module ToLLVM where
 
     toFun :: MLabel -> LLVM ()
     toFun (MLabel labelNo absMinss) =
+        decextrefs >> 
         defFun ("LABEL" ++ (show labelno)) [llvmInssInBlock]
         where llvmInss :: Codegen [()]
               llvmInss = 
                 mapM cgenStatement absMinss
+              decextrefs :: LLVM [()]
+              decextrefs = 
+                mapM (\x -> external goTy x []) extrefs
+              extrefs :: [String]
+              extrefs = extfuns generatedCode
               llvmInssInBlock :: BasicBlock
               llvmInssInBlock = 
                 BasicBlock labelName codeInblock (Just (Ret Nothing))
-                where labelName :: Name
-                      labelName = mkName "entry"
-                      codeInblock :: [Named Instruction]
-                      codeInblock = reverse . stack .block $ generatedCode
-                      generatedCode :: CodegenState
-                      generatedCode = execState (runCodegen llvmInss) emptyCode
-                      emptyCode :: CodegenState
-                      emptyCode = CodegenState (BlockState []) 1
+              labelName :: Name
+              labelName = mkName "entry"
+              codeInblock :: [Named Instruction]
+              codeInblock = reverse . stack .block $ generatedCode
+              generatedCode :: CodegenState
+              generatedCode = execState (runCodegen llvmInss) emptyCode
+              emptyCode :: CodegenState
+              emptyCode = CodegenState (BlockState []) 1
 
 
     type SymbolTable = [(String, Operand)]
@@ -99,11 +105,11 @@ module ToLLVM where
         GlobalDefinition (regType) .
         mkName . show
 
-    envptpt :: Operand
-    envptpt =
+    envPt :: Operand
+    envPt =
         ConstantOperand . 
-        GlobalDefinition (pType goTy) . 
-        mkName . ("envPtPt") 
+        GlobalDefinition (pType regType) . 
+        mkName . ("envPt") 
 
     
 
@@ -142,6 +148,8 @@ module ToLLVM where
         return i
     }
 
+    
+
     instr :: Instruction -> Codegen (Operand)
     instr ins = do {
       n <- fresh
@@ -151,11 +159,17 @@ module ToLLVM where
       modifyBlock (blk { stack = (ref := ins) : i } )
       return $ local ref
       }
+      where modifyBlock :: BlockState -> Codegen ()
+            modifyBlock x = do
+                modify $ \s -> s {block = x}
     
-    externSchmidty :: Id -> Ty -> Codegen Operand
-    externSchmidty i ty = 
-        callinternalFunWithArg goTy ("getExt" ++ fname) []
+    getexternSchmidty :: Id -> Ty -> Codegen Operand
+    getexternSchmidty i ty = do
+        extrefs <- gets extfuns
+        modify $ \s -> s {extfuns = callingname: extrefs} 
+        callinternalFunWithArg goTy callingname []
         where fname = idToVarName i
+              callingname = "getExt" ++ fname
 
     callinternalFunWithArg :: Type -> String -> [Operand] -> Codegen Operand
     callinternalFunWithArg ty x args =
@@ -176,7 +190,7 @@ module ToLLVM where
     
     internalFunNames :: [String, Type, [(Type, String)]]
     internalFunNames = 
-        [("prevEnvpt", (pType goTy), [(pType goTy), "pt"]),
+        [("prevEnvptByEnvshell", (pType goTy), [(pType goTy), "pt"]),
          ("addEnv", VoidType, []),
          ("SUC", VoidType, [((goTy), "x"), (goTy, "cont")]),
          ("NGT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
@@ -197,7 +211,7 @@ module ToLLVM where
          ("initContStack", goTy, [((IntegerType machinebit), "regnum"), ((FunctionType VoidType [] False), "entrance"), (goTy, "exit")]),
          ("setEnvContentToPt", VoidType, [((goTy, "envContent")), (pType goTy, "envPt")])
          ("extractEnvContentFromPt", goTy, [(pType goTy, "envPt")]),
-         ("ExtractEnvptfromcls", goTy, [(goTy, "cls")])]
+         ("ExtractEnvshellfromcls", goTy, [(goTy, "cls")])]
 
     
     store :: Operand -> Operand -> Codegen Operand
@@ -212,11 +226,11 @@ module ToLLVM where
         callinternalFun "addEnv" >> addEnv (n - 1)
     
 
-    getPtToEnvloc :: Envloc -> Codegen Operand
-    getPtToEnvloc 0 = load envptpt
-    getPtToEnvloc n = do {
-        spt <- getPtToEnvloc (n - 1)
-        callinternalFunWithArg (pType goTy) "prevEnvpt" [spt]
+    getEnvshellatEnvloc :: Envloc -> Codegen Operand
+    getEnvshellatEnvloc 0 = load envPt
+    getEnvshellatEnvloc n = do {
+        spt <- getEnvshellatEnvloc (n - 1)
+        callinternalFunWithArg (pType goTy) "prevEnvptByEnvshell" [spt]
         }
 
     setEnvContentToPt :: Operand -> Operand -> Codegen Operand
@@ -228,10 +242,10 @@ module ToLLVM where
         callinternalFunWithArg (goTy) "extractEnvContentFromPt" [x]
 
     getEnvContentFromEnvloc x = 
-        getPtToEnvloc x >>= extractEnvContentFromPt
+        getEnvshellatEnvloc x >>= extractEnvContentFromPt
     
     setEnvContentToEnvloc content x =
-        getPtToEnvloc x >>= (setEnvContentToPt content)
+        getEnvshellatEnvloc x >>= (setEnvContentToPt content)
 
 
     cint :: Integer -> Operand
@@ -242,8 +256,8 @@ module ToLLVM where
         envContent <- getEnvContentFromEnvloc i
     cgenValue (VInt i) =
         callinternalFunWithArg (goTy) "constInteger" [cint i]
-    cgenValue (VDeclare i ty) =
-        externSchmidty i ty
+    cgenValue (VDeclare i ty) = do
+        getexternSchmidty i ty
     cgenValue (VClosure labelno envloc) =
         callinternalFunWithArg (goTy) "closureCons" [labelnof, cint envloc]
         where labelnof = 
@@ -308,25 +322,24 @@ module ToLLVM where
     }
 
     cgenStatement (SetEnvPt envloc) = do {
-        newPtPtEnv <- getPtToEnvloc envloc
-        newPtEnv <- load newPtPtEnv
-        store envptpt newPtEnv
+        newEnvshell <- getEnvshellatEnvloc envloc
+        store envPt newEnvshell
     }
 
-    cgenStatement (ExtractEnvptfromclsToReg r1 r2) = do {
+    cgenStatement (ExtractEnvshellfromclsToReg r1 r2) = do {
         cls <- load (regPt r1)
-        clsenvpt <- callinternalFunWithArg (pType goTy) "ExtractEnvptfromcls" [cls]
+        clsenvpt <- callinternalFunWithArg (goTy) "ExtractEnvshellfromcls" [cls]
         store (regPt r2) clsenvpt
     } 
 
     cgenStatement (EnvptToReg r1) = do {
-        ptEnv <- load envptpt
-        store (regPt r1) ptEnv
+        envShell <- load envPt
+        store (regPt r1) envShell
     }
 
     cgenStatement (RegToEnvpt r1) = do {
-        ptEnv <- load (regPt r1)
-        store envptpt ptEnv
+        envShell <- load (regPt r1)
+        store envPt envShell
     }
 
     cgenStatement (AddEnv i) = addEnv i
