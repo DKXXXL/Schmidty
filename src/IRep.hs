@@ -1,5 +1,5 @@
 module IRep where
-
+    import AST
     --- CPS style
     data EForm =
         | ENone
@@ -29,11 +29,12 @@ module IRep where
         | TFFixC EForm EForm 
         --
         | TFLet Id Ty EForm TForm
+        | TFLetExt Id Ty TForm
         | TFBEQ EForm EForm EForm
         | TFLeft EForm EForm
         | TFRight EForm EForm
         | TFCase EForm EForm EForm EForm
-        | TFLetRcd Id TyId Ty [(Id, Ty)] TForm 
+--        | TFLetRcd Id TyId Ty [(Id, Ty)] TForm 
         | TFSeq TForm TForm 
 
     --- Machine Style
@@ -56,6 +57,7 @@ module IRep where
         | VTrue
         | VFalse
         | VVar Envloc
+        | VDeclare Id Ty
         | VField Ty Id
         | VConstructor TyId
         --- Construct a closure with Integer as label name
@@ -76,6 +78,7 @@ module IRep where
         | SetReg Register Value
         | SetEnv Envloc Value
         | SetEnvPt Envloc
+        | ExtractEnvclsToReg Register Register
         --- move up pointer to upper 'Envloc'
         | EnvptToReg Register
         | RegToEnvpt Register

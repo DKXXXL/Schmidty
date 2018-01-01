@@ -105,6 +105,12 @@ has_type' tyd vd (MLet i T bind body) =
     in (has_type' tyd newd bind) 
         >>= (\bindty -> if (subtyOf bindty T) then has_type' tyd newd body else Nothing)
 
+has_type' tyd vd (MLetExt i T body) =
+    let newd = addDict vd i T
+    in (has_type' tyd newd bind) 
+        >>= (\bindty -> has_type' tyd newd body)
+
+
 has_type' _ _ MTrue =
     Just TBool
 

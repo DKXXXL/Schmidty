@@ -1,17 +1,20 @@
 module AbsMachine where
+    import AST
     
+
     data ABSS = ABSS {
         LABELNO :: Integer,
-        FUNS :: [MLabel]
+        FUNS :: [MLabel],
+        DECLARE :: Dict Id Id
     } deriving (Show, Eq) 
     type ABSM = State ABSS
 
-    initialState :: ABSS
-    initialState = ABSS 2 []
+    initialState :: Dict Id Id -> ABSS
+    initialState predecl = ABSS 2 [] predecl
 
-    toAbsMachL :: TForm -> [MLabel]
-    toAbsMachL tf = (MLabel 0 mainRunning):fs
-        where (mainRunning, fs) = runState (machl tf) initialState
+    toAbsMachL :: Dict Id Id -> TForm -> [MLabel]
+    toAbsMachL predecl tf = (MLabel 0 mainRunning):fs
+        where (mainRunning, fs) = runState (machl tf) (initialState predecl)
 
 
     accLabel :: Integer -> ABSM ()
@@ -140,6 +143,17 @@ module AbsMachine where
              SetEnv 0 bind',
              ] ++ body'
         }
+
+    machl (TFLetExt i ty body) =
+        do {
+            dict <- gets DECLARE
+            body' <- machl body
+            let extName = checkDict dict i
+            return $ 
+            [AddEnv 1,
+             SetEnv 0 (VDeclare extName ty)] ++
+             body'
+        }
     machl (TFBEQ a b cont) =
         do {
             init <- mapEFormToRegs [a, b, cont] [1, 2, 3];
@@ -210,7 +224,17 @@ module AbsMachine where
             return $ VClosure labelnow 0
         }
 
-    machl' (EField ty i) = return $ VField ty i
+    machl' (EField ty i) = do {
+        let body = [
+            ExtractEnvptfromclsToReg (reg 1) (reg 1),
+            RegToEnvpt (reg 1),
+            SetRegEnv (reg 1) i,
+            SetRegReg (reg 0) (reg 2),
+            APP
+        ]
+        labelnow <- addnewfun body
+        return $ VClosure labelnow 0
+    }
     
 
     

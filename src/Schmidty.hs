@@ -8,6 +8,9 @@ module Schmidty where
     import Typing as Ty 
     --- import TypeInfer as Ti
 
+    passTonameResolution :: String -> Tm 
+    
+
     passToLLVMModule :: String -> LAST.Module
 
 

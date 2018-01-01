@@ -81,3 +81,8 @@ accCt ct = do {
     atomicModifyIORef' ct (\x -> (x+1, x+1));
     return ret
 }
+
+varNameToid :: String -> Id
+idToVarName :: Id -> String
+
+

@@ -1,6 +1,6 @@
 module ToLLVM where
 
-
+    import AST
     import IRep
     import LLVM.AST
 
@@ -23,7 +23,7 @@ module ToLLVM where
               return llstr
         where asts = toLLVMModule labels
 
-    toLLVMModule :: [MLabel] -> (AST.Module)
+    toLLVMModule :: Dict Id (Id, Ty) -> [MLabel] -> (AST.Module)
     toLLVMModule labels = allAst
         where labels' = reverse $ sort labels
               --- tollvm :: LLVM ()
@@ -133,6 +133,7 @@ module ToLLVM where
         , basicBlocks = []
         }
 
+
     fresh :: Codegen Word
     fresh = do {
         i <- gets count
@@ -150,6 +151,11 @@ module ToLLVM where
       return $ local ref
       }
     
+    externSchmidty :: Id -> Ty -> Codegen Operand
+    externSchmidty i ty = 
+        callinternalFunWithArg goTy ("getExt" ++ fname) []
+        where fname = idToVarName i
+
     callinternalFunWithArg :: Type -> String -> [Operand] -> Codegen Operand
     callinternalFunWithArg ty x args =
         instr $ Call (Just Tail) CC.C [] (Right fn) args' [] []
@@ -185,8 +191,8 @@ module ToLLVM where
          ("JUMPBACKCONT", VoidType, [((goTy), "fixinfo")])
          ("GOTOEVALBIND", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")])
          ("ADDCONTSTACKIFEXIST", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")])
-         ("constInteger", goTy, [(IntegerType machinebit), ]
-         "fieldExtract",
+         ("constInteger", goTy, [(IntegerType machinebit), "x"]
+         ("fieldExtract", goTy, [()]
          "constructorOfRecord",
          "closureCons",
          "initContStack",
@@ -240,6 +246,8 @@ module ToLLVM where
         callinternalFunWithArg (goTy) "fieldExtract" [cint tyid, cint id]
     cgenValue (VConstructor tyid) =
         callinternalFunWithArg (goTy) "constructorOfRecord" [cint tyid]
+    cgenValue (VDeclare i ty) =
+        externSchmidty i ty
     cgenValue (VClosure labelno envloc) =
         callinternalFunWithArg (goTy) "closureCons" [labelnof, cint envloc]
         where labelnof = 

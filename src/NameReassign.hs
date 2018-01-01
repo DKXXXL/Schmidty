@@ -6,6 +6,9 @@ module NameReassign where
     type LexDict = Dict Id Id
     type LexTypeDict = Dict TyId TyId
 
+    us_extDict :: IORef LexDict
+    us_extDict = unsafePerformIO $ newIORef []
+
     nameConflictResolution :: Tm -> Tm
     nameConflictResolution = nameReassign accum 0
         where accum ct = do {
@@ -73,10 +76,18 @@ module NameReassign where
     nameRes acc ct d (MApp f x) =
         MApp (nameRes acc ct d f) (nameRes acc ct x)
     
-    nameRes acc ct d (MLet i bind body) =
+    nameRes acc ct d (MLet i T bind body) =
         let ni = unsafePerformIO $ acc ct
-        in MLet ni (nameRes acc ct bind) (nameRes acc ct (addDict d i ni) body)
+        in MLet ni T (nameRes acc ct bind) (nameRes acc ct (addDict d i ni) body)
     
+    nameRes acc ct d (MLetExt i T body) =
+        let ni = unsafePerformIO $ acc ct
+            extadd = unsafePerformIO $
+                     atomicModifyIORef' us_extDict $
+                      \x -> addDict x ni i
+        in MLetExt ni (nameRes acc ct (addDict d i ni) body)
+    
+
     nameRes acc ct d (MTrue) = MTrue 
     nameRes acc ct d (MFalse) = MFalse
 
@@ -233,6 +244,57 @@ module NameReassign where
 
     recurMention s x = x
     
+    fieldNameEli :: Dict TyId [Id] -> Tm -> Tm
+    
+    fieldNameEli s (MIf a b c) =
+        MIf (fieldNameEli s a) (fieldNameEli s b) (fieldNameEli s c)
+
+
+    fieldNameEli s (MSuc a) =
+        MSuc (fieldNameEli s a)
+
+    fieldNameEli s (MNGT a b) =
+        MNGT (fieldNameEli s a) (fieldNameEli s b)
+
+    fieldNameEli s (MNEQ a b) =
+        MNEQ (fieldNameEli s a) (fieldNameEli s b)
+
+    fieldNameEli s (MNLT a b) =
+        MNLT (fieldNameEli s a) (fieldNameEli s b)
+
+    fieldNameEli s (MFun i T body) =
+        MFun i T (fieldNameEli (remove i s) body)
+
+    fieldNameEli s (MApp a b) =
+        MApp (fieldNameEli s a) (fieldNameEli s b)
+
+    fieldNameEli s (MLet i T bind body) =
+        MLet i T (fieldNameEli (i : s) bind) (fieldNameEli s body)
+        
+    fieldNameEli s (MBEQ a b) =
+        MBEQ (fieldNameEli s a) (fieldNameEli s b)
+
+    fieldNameEli s (MLeft l r) =
+        MLeft (fieldNameEli s l) r
+
+    fieldNameEli s (MRight l r) =
+        MRight l (fieldNameEli s r)
+
+    fieldNameEli s (MCase x l r) =
+        MCase (fieldNameEli s x) (fieldNameEli s l) (fieldNameEli s r)
+
+    fieldNameEli s (MLetRcd cons ty suty rcd body) =
+        let s' = addDict s ty $ map fst rcd
+        in MLetRcd cons ty suty rcd (fieldNameEli s' body)
+
+    fieldNameEli s (MSeq a b) =
+        MSeq (fieldNameEli s a) (fieldNameEli s b)
+    
+    fieldNameEli s (MField tyid id) =
+        let fields = checkDict s tyid
+        in let offset = (length fields) - (index fields id)
+        in MField tyid offset
 
     
+    fieldNameEli s x = x
 

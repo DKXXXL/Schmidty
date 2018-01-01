@@ -109,7 +109,8 @@ module CPS where
             (cps bind ibindx) 
             (ECont ibindi' (TFLet i ty ibindx' bodyTF))
     
-    
+    cps (MLetExt i ty body) kont =
+        TFLetExt i ty (cps body kont)
 
     cps (MTrue) kont =
         TFApp kont ETrue
@@ -147,9 +148,11 @@ module CPS where
                (TFApp _ rb') = cps rb ETrue
         in cps crit (ECont xi (TFCase x lb' rb' kont))
     
-
     cps (MLetRcd cons ty suty rcd body) kont =
-        TFLetRcd cons ty suty rcd (cps body kont)
+        cps (MLet cons TInfer (consConstructor rcd) body) kont
+        where consConstructor :: [(Id, Ty)] -> Tm
+              consConstructor [] = MFun 1 TNat (MVar 1)
+              consConstructor ((_, ty):x) = MFun 1 ty (consConstructor x)
     
     cps (MField ty fld) kont =
         TFApp kont (EField ty fld)

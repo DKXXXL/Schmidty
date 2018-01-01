@@ -55,6 +55,10 @@ module NameEli where
         let c' = addDict c (NId i) 0
         in TFLet i T (nameEli' c bind) (nameEli c' body)
     
+    nameEli c (TFLetExt i ty body) =
+        let c' = addDict c (NId i) 0
+        in TFLetExt i T (nameEli c' body)
+    
     nameEli c (TFBEQ a b cont) =
         TFBEQ (nameEli' c a) (nameEli' c b) (nameEli' c cont)
 
@@ -74,4 +78,4 @@ module NameEli where
     nameEli c (TFSeq pre post) =
         TFSeq (nameEli c pre) (nameEli c post)
 
-    
+
