@@ -40,7 +40,7 @@ module ToLLVM where
     toFun (MLabel labelNo absMinss) =
         defFun ("LABEL" ++ (show labelno)) [llvmInssInBlock]
         where llvmInss :: Codegen [()]
-              (Codegen llvmInss) = 
+              llvmInss = 
                 mapM cgenStatement absMinss
               llvmInssInBlock :: BasicBlock
               llvmInssInBlock = 
@@ -60,7 +60,8 @@ module ToLLVM where
     data CodegenState
     = CodegenState {
     block        :: BlockState  -- Blocks for function
-    , count        :: Word                     -- Count of unnamed instructions
+    , count      :: Word                     -- Count of unnamed instructions
+    , extfuns    :: [String]
     } deriving Show
 
     data BlockState
@@ -176,28 +177,27 @@ module ToLLVM where
     internalFunNames :: [String, Type, [(Type, String)]]
     internalFunNames = 
         [("prevEnvpt", (pType goTy), [(pType goTy), "pt"]),
-         ("addEnv", VoidType, [])
-         ("SUC", VoidType, [((goTy), "x"), (goTy, "cont")])
-         ("NGT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
-         ("NEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
-         ("NLT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
-         ("CEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
-         ("BEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")])
-         ("LEFT", VoidType, [((goTy), "x"), (goTy, "cont")])
-         ("RIGHT", VoidType, [((goTy), "x"), (goTy, "cont")])
-         ("APP", VoidType, [((goTy), "x"), (goTy, "cont")])
-         ("IFJUMP", VoidType, [((goTy), "crit"),(goTy, "tb"),(goTy, "fb")])
-         ("CASEJUMP", VoidType, [((goTy), "crit"),(goTy, "lb"),(goTy, "rb"), (goTy, "cont")])
-         ("JUMPBACKCONT", VoidType, [((goTy), "fixinfo")])
-         ("GOTOEVALBIND", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")])
-         ("ADDCONTSTACKIFEXIST", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")])
-         ("constInteger", goTy, [(IntegerType machinebit), "x"]
-         ("fieldExtract", goTy, [()]
-         "constructorOfRecord",
-         "closureCons",
-         "initContStack",
-         "setEnvContentToPt",
-         "extractEnvContentFromPt"]
+         ("addEnv", VoidType, []),
+         ("SUC", VoidType, [((goTy), "x"), (goTy, "cont")]),
+         ("NGT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
+         ("NEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
+         ("NLT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
+         ("CEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
+         ("BEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
+         ("LEFT", VoidType, [((goTy), "x"), (goTy, "cont")]),
+         ("RIGHT", VoidType, [((goTy), "x"), (goTy, "cont")]),
+         ("APP", VoidType, [((goTy), "x"), (goTy, "cont")]),
+         ("IFJUMP", VoidType, [((goTy), "crit"),(goTy, "tb"),(goTy, "fb")]),
+         ("CASEJUMP", VoidType, [((goTy), "crit"),(goTy, "lb"),(goTy, "rb"), (goTy, "cont")]),
+         ("JUMPBACKCONT", VoidType, [((goTy), "fixinfo")]),
+         ("GOTOEVALBIND", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")]),
+         ("ADDCONTSTACKIFEXIST", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")]),
+         ("constInteger", goTy, [((IntegerType machinebit), "x")]),
+         ("closureCons", goTy, [((FunctionType VoidType [] False), "f"), ((pType goTy), "env")]),
+         ("initContStack", goTy, [((IntegerType machinebit), "regnum"), ((FunctionType VoidType [] False), "entrance"), (goTy, "exit")]),
+         ("setEnvContentToPt", VoidType, [((goTy, "envContent")), (pType goTy, "envPt")])
+         ("extractEnvContentFromPt", goTy, [(pType goTy, "envPt")]),
+         ("ExtractEnvptfromcls", goTy, [(goTy, "cls")])]
 
     
     store :: Operand -> Operand -> Codegen Operand
@@ -242,10 +242,6 @@ module ToLLVM where
         envContent <- getEnvContentFromEnvloc i
     cgenValue (VInt i) =
         callinternalFunWithArg (goTy) "constInteger" [cint i]
-    cgenValue (VField (TVar tyid) id) = 
-        callinternalFunWithArg (goTy) "fieldExtract" [cint tyid, cint id]
-    cgenValue (VConstructor tyid) =
-        callinternalFunWithArg (goTy) "constructorOfRecord" [cint tyid]
     cgenValue (VDeclare i ty) =
         externSchmidty i ty
     cgenValue (VClosure labelno envloc) =
@@ -317,6 +313,12 @@ module ToLLVM where
         store envptpt newPtEnv
     }
 
+    cgenStatement (ExtractEnvptfromclsToReg r1 r2) = do {
+        cls <- load (regPt r1)
+        clsenvpt <- callinternalFunWithArg (pType goTy) "ExtractEnvptfromcls" [cls]
+        store (regPt r2) clsenvpt
+    } 
+
     cgenStatement (EnvptToReg r1) = do {
         ptEnv <- load envptpt
         store (regPt r1) ptEnv
@@ -349,6 +351,8 @@ module ToLLVM where
         rct <- load $ regPt r1
         callinternalFunWithArg retType "ADDCONTSTACKIFEXIST" [envContent, rct]
     }
+
+
 
     cgenStatement x = 
         tcall nx x

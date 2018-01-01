@@ -58,8 +58,6 @@ module IRep where
         | VFalse
         | VVar Envloc
         | VDeclare Id Ty
-        | VField Ty Id
-        | VConstructor TyId
         --- Construct a closure with Integer as label name
         --- Envloc as the environment with closure, with Envloc back
         | VClosure Integer Envloc
@@ -78,7 +76,7 @@ module IRep where
         | SetReg Register Value
         | SetEnv Envloc Value
         | SetEnvPt Envloc
-        | ExtractEnvclsToReg Register Register
+        | ExtractEnvptfromclsToReg Register Register
         --- move up pointer to upper 'Envloc'
         | EnvptToReg Register
         | RegToEnvpt Register
