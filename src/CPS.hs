@@ -35,6 +35,12 @@ module CPS where
         in let xi = Cont xc 
                x = ECVar xc
         in cps a (ECont xi (TFSuc x kont))
+
+    cps (MDec a) kont =
+        let xc = unsafePerformIO $ accCt ct 
+        in let xi = Cont xc 
+               x = ECVar xc
+        in cps a (ECont xi (TFDec x kont))
     
     cps (MNGT a b) kont =
         let xc = unsafePerformIO $ accCt ct 

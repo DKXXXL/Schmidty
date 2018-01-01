@@ -71,6 +71,12 @@ module AbsMachine where
             return (init ++ [SUC])
         }
 
+    machl (TFDec x cont) =
+        do {
+            init <- mapEFormToRegs [x, cont] [1, 2];
+            return (init ++ [DEC])
+        }
+
     machl (TFNGT a b cont) =
         do {
             init <- mapEFormToRegs [a, b, cont] [1, 2, 3];

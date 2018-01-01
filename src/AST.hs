@@ -26,11 +26,12 @@ data Tm =
     | MIf Tm Tm Tm
     | MVar Id
     | MZero
+    | MInt Integer
     | MSuc Tm 
+    | MDec Tm
     | MNGT Tm Tm 
     | MNEQ Tm Tm
     | MNLT Tm Tm
-    | MInt Integer
     | MChr Integer
     | MCEQ Tm Tm 
     | MFun Id Ty Tm 
@@ -82,7 +83,12 @@ accCt ct = do {
     return ret
 }
 
-varNameToid :: String -> Id
+varNameToid :: [Char] -> Id
+varNameToid (x:[]) = toInteger . ord $ x
+varNameToid (x:s) = (toInteger . ord $ x) + (varNameToid s) * 128
 idToVarName :: Id -> String
+idToVarName i = 
+    if (i `div` 128) > 0 then [chr i] 
+    else (chr (i `mod` 128)):(idToVarName (i `div` 128))
 
 

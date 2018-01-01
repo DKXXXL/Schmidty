@@ -18,6 +18,7 @@ module IRep where
     data TForm =
         | TFIf EForm TForm TForm
         | TFSuc EForm EForm
+        | TFDec EForm EForm
         | TFNGT EForm EForm EForm
         | TFNEQ EForm EForm EForm 
         | TFNLT EForm EForm EForm
@@ -84,6 +85,7 @@ module IRep where
         | AddEnv Integer
         --- Internal Func
         | SUC
+        | DEC
         | NGT
         | NEQ
         | NLT

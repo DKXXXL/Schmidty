@@ -54,6 +54,10 @@ module NameReassign where
     nameRes acc ct d (MSuc x) =
         MSuc (nameRes acc ct d x)
     
+    nameRes acc ct d (MDec x) =
+        MDec (nameRes acc ct d x)
+
+
     nameRes acc ct d (MNGT a b) =
         MNGT (nameRes acc ct d a) (nameRes acc ct d b)
     
@@ -135,6 +139,9 @@ module NameReassign where
     typenameRes acc ct d (MSuc x) =
         MSuc (typenameRes acc ct d x)
 
+    typenameRes acc ct d (MDec x) =
+        MDec (typenameRes acc ct d x)
+
     typenameRes acc ct d (MNGT a b) =
         MNGT (typenameRes acc ct d a) (typenameRes acc ct d b)
 
@@ -156,8 +163,11 @@ module NameReassign where
     typenameRes acc ct d (MApp f x) =
         MApp (typenameRes acc ct d f) (typenameRes acc ct x)
 
-    typenameRes acc ct d (MLet i bind body) =
-        MLet i (typenameRes acc ct d bind) (typenameRes acc ct d body)
+    typenameRes acc ct d (MLet i T bind body) =
+        MLet i (typeIdSubst d T) (typenameRes acc ct d bind) (typenameRes acc ct d body)
+
+    typenameRes acc ct d (MLetExt i T body) =
+        MLetExt i (typeIdSubst d T) (typenameRes acc ct d body)
 
     typenameRes acc ct d (MTrue) = MTrue 
     typenameRes acc ct d (MFalse) = MFalse
@@ -252,6 +262,9 @@ module NameReassign where
 
     fieldNameEli s (MSuc a) =
         MSuc (fieldNameEli s a)
+    
+    fieldNameEli s (MDec a) =
+        MDec (fieldNameEli s a)
 
     fieldNameEli s (MNGT a b) =
         MNGT (fieldNameEli s a) (fieldNameEli s b)
@@ -269,7 +282,10 @@ module NameReassign where
         MApp (fieldNameEli s a) (fieldNameEli s b)
 
     fieldNameEli s (MLet i T bind body) =
-        MLet i T (fieldNameEli (i : s) bind) (fieldNameEli s body)
+        MLet i T (fieldNameEli s bind) (fieldNameEli s body)
+        
+    fieldNameEli s (MLetExt i T body) =
+        MLetExt i T (fieldNameEli s body)
         
     fieldNameEli s (MBEQ a b) =
         MBEQ (fieldNameEli s a) (fieldNameEli s b)

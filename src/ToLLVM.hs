@@ -193,6 +193,7 @@ module ToLLVM where
         [("prevEnvptByEnvshell", (pType goTy), [(pType goTy), "pt"]),
          ("addEnv", VoidType, []),
          ("SUC", VoidType, [((goTy), "x"), (goTy, "cont")]),
+         ("DEC", VoidType, [((goTy), "x"), (goTy, "cont")]),
          ("NGT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
          ("NEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
          ("NLT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
@@ -372,6 +373,7 @@ module ToLLVM where
         where nx = snd . head . filter (== x) $ internalFlist
               internalFlist = 
                 [(SUC, 2),
+                 (DEC, 2),
                  (NGT, 3),
                  (NEQ, 3),
                  (NLT, 3),
