@@ -7,7 +7,9 @@ module CPS where
 
     -- Variable
     
-
+    cpsTransform :: Tm -> TForm
+    cpsTransform x =
+        cps (unsafePerformIO (newIORef 2)) x (ECont 1 (ECVar 1))
 
     cps :: Counter -> Tm -> Kont -> TForm
     cps ct MNone kont =

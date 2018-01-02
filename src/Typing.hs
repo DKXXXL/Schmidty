@@ -16,7 +16,7 @@ subtypeOf' :: CustomedTypeDict -> Ty -> Ty -> Bool
 subtypeOf' d (TFun i o) (TFun i' o') =
     (subtyOf d i' i) && (subtyOf d o o')
 subtypeOf' d (TSum a b) (TSum a' b') =
-    (subtyOf a a') && (subtyOf b b')
+    (subtyOf d a a') && (subtyOf d b b')
 subtypeOf' d (TVar sub) super =
     let supOfSub, _ = checkDict d sub
     in subtyOf d supOfSub super
@@ -97,13 +97,13 @@ has_type' tyd vd (MApp f x) =
         fT <- tyInCtx f;
         xT <- tyInCtx x;
         case fT of (TFun tyI tyO) ->
-            if (subtyOf xT tyI) then Just tyO else Nothing
+            if (subtyOf tyd xT tyI) then Just tyO else Nothing
     }
 
 has_type' tyd vd (MLet i T bind body) =
     let newd = addDict vd i T
     in (has_type' tyd newd bind) 
-        >>= (\bindty -> if (subtyOf bindty T) then has_type' tyd newd body else Nothing)
+        >>= (\bindty -> if (subtyOf tyd bindty T) then has_type' tyd newd body else Nothing)
 
 has_type' tyd vd (MLetExt i T body) =
     let newd = addDict vd i T
@@ -145,8 +145,8 @@ has_type' tyd vd (MCase crit bA bB) =
             case tybA of (TFun IT OT) ->
                 case tybB of (TFun IT' OT') ->
                   if((LT == IT) && (RT == IT'))
-                    then if (OT `subtyOf` OT') then Just OT'
-                            if (OT' `subtyOf` OT) then Just OT
+                    then if (subtyOf tyd OT OT') then Just OT'
+                            if (subtyOf tyd OT' OT) then Just OT
                                 else Nothing
                     else Nothing
                             _ -> Nothing
@@ -185,8 +185,8 @@ checkSubtyping :: CustomedTypeDict -> [(Id, Ty)] -> [(Id, Ty)] -> Bool
 checkSubtyping _ subty [] = True 
 checkSubtyping typesInfo ((n, a):b) ((n', a'):b') =
     n == n'
-    && subtyOf a a' 
-    && checkSubtyping b b'
+    && subtyOf typesInfo a a' 
+    && checkSubtyping typesInfo b b'
 
 
 

@@ -1,5 +1,6 @@
 module ToAST where
-
+    import Parsing2 as P
+    import AST
 
     toType :: P.SStruc -> Ty
     toType (P.SAtom "Int") = TNat

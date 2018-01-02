@@ -19,7 +19,8 @@ data Ty =
     | TInfer InferId
     deriving (Show, Eq)
 
--- Terms
+
+
 
 data Tm =
     | MNone

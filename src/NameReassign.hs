@@ -7,6 +7,7 @@ module NameReassign where
     type LexTypeDict = Dict TyId TyId
 
     us_extDict :: IORef LexDict
+    {-# NOINLINE us_extDict #-}
     us_extDict = unsafePerformIO $ newIORef []
 
     nameConflictResolution :: Tm -> Tm
@@ -29,8 +30,10 @@ module NameReassign where
     decorateFixCall :: Tm -> Tm
     decorateFixCall = recurMention []
 
+    fieldNameFixCall :: Tm -> Tm
+    fieldNameFixCall = fieldNameEli []
+
     nameReassign :: AccCounter -> Integer -> Tm -> Tm
-    
     nameReassign acc init tm =
         nameRes acc (unsafePerformIO $ newIORef init) [] tm
     
@@ -86,7 +89,7 @@ module NameReassign where
     
     nameRes acc ct d (MLetExt i T body) =
         let ni = unsafePerformIO $ acc ct
-            extadd = unsafePerformIO $
+            ! extadd = unsafePerformIO $
                      atomicModifyIORef' us_extDict $
                       \x -> addDict x ni i
         in MLetExt ni (nameRes acc ct (addDict d i ni) body)

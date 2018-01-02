@@ -5,6 +5,7 @@ module NameEli where
     data UniId = NId Id | CId Id deriving (Show, Eq)
     type UniLexi = Dict UniId Integer
 
+    nameElimination = nameEli []
 
     nameEli' :: UniLexi -> EForm -> EForm
     nameEli' c (EVar i) = EVar $ dictLoc' c (NId i)

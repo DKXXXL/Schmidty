@@ -2,7 +2,7 @@ module ToLLVM where
 
     import AST
     import IRep
-    import LLVM.AST
+    import LLVM.AST as AST
 
     ---- Reference : Implementing a JIT 
     ------ Compiled Language with Haskell and LLVM
@@ -15,15 +15,14 @@ module ToLLVM where
 
     
 
-    toLLVMAsm :: [MLabel] -> IO ByteString
-    toLLVMAsm labels =
+    toLLVMAsm :: AST.Module -> IO ByteString
+    toLLVMAsm asts =
         withContext $ \context ->
             liftError $ withModuleFromAST context asts $ \m -> do
               llstr <- moduleLLVMAssembly m
               return llstr
-        where asts = toLLVMModule labels
 
-    toLLVMModule :: Dict Id (Id, Ty) -> [MLabel] -> (AST.Module)
+    toLLVMModule :: [MLabel] -> (AST.Module)
     toLLVMModule labels = allAst
         where labels' = reverse $ sort labels
               --- tollvm :: LLVM ()
