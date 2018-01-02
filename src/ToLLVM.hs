@@ -181,37 +181,41 @@ module ToLLVM where
     
     callinternalFun :: String -> Codegen Operand
     callinternalFun x = 
-        instr $ Call Nothing CC.C [] (Right fn) [] [] []
+        instr $ Call (Just Tail) CC.C [] (Right fn) [] [] []
         where fn :: Operand
               fn = ConstantOperand . 
                     GlobalReference retType . 
                     mkName $ x
     
+    gft = pType (FunctionType VoidType [] False)
+
     internalFunNames :: [String, Type, [(Type, String)]]
     internalFunNames = 
-        [("prevEnvptByEnvshell", (pType goTy), [(pType goTy), "pt"]),
-         ("addEnv", VoidType, []),
-         ("SUC", VoidType, [((goTy), "x"), (goTy, "cont")]),
-         ("DEC", VoidType, [((goTy), "x"), (goTy, "cont")]),
-         ("NGT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
-         ("NEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
-         ("NLT", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
-         ("CEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
-         ("BEQ", VoidType, [((goTy), "x"),(goTy, "y"),(goTy, "cont")]),
-         ("LEFT", VoidType, [((goTy), "x"), (goTy, "cont")]),
-         ("RIGHT", VoidType, [((goTy), "x"), (goTy, "cont")]),
-         ("APP", VoidType, [((goTy), "x"), (goTy, "cont")]),
-         ("IFJUMP", VoidType, [((goTy), "crit"),(goTy, "tb"),(goTy, "fb")]),
-         ("CASEJUMP", VoidType, [((goTy), "crit"),(goTy, "lb"),(goTy, "rb"), (goTy, "cont")]),
-         ("JUMPBACKCONT", VoidType, [((goTy), "fixinfo")]),
-         ("GOTOEVALBIND", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")]),
+        [("prevEnvshellByEnvshell", (goTy), [(goTy), "envshell"]),
+         ("addEnv", goTy, [[(goTy), "env"]]),
+         ("SUC", goTy, [((goTy), "x")]),
+         ("DEC", goTy, [((goTy), "x")]),
+         ("NGT", goTy, [((goTy), "x"),(goTy, "y")]),
+         ("NEQ", goTy, [((goTy), "x"),(goTy, "y")]),
+         ("NLT", goTy, [((goTy), "x"),(goTy, "y")]),
+         ("CEQ", goTy, [((goTy), "x"),(goTy, "y")]),
+         ("BEQ", goTy, [((goTy), "x"),(goTy, "y")]),
+         ("LEFT", goTy, [((goTy), "x")]),
+         ("RIGHT", goTy, [((goTy), "x")]),
+         ("APP", VoidType, [((goTy), "x")]),
+         ("IFJUMP", goTy, [((goTy), "crit"),(goTy, "tb"),(goTy, "fb")]),
+         ("CASEJUMP", goTy, [((goTy), "crit"),(goTy, "lb"),(goTy, "rb"), (goTy, "cont")]),
+         ("JUMPBACKCONT", goTy, [((goTy), "fixinfo")]),
+         ("GOTOEVALBIND", goTy, [((goTy), "fixinfo"), ((goTy), "maybeCont")]),
          ("ADDCONTSTACKIFEXIST", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")]),
          ("constInteger", goTy, [((IntegerType machinebit), "x")]),
-         ("closureCons", goTy, [((FunctionType VoidType [] False), "f"), ((pType goTy), "env")]),
-         ("initContStack", goTy, [((IntegerType machinebit), "regnum"), ((FunctionType VoidType [] False), "entrance"), (goTy, "exit")]),
-         ("setEnvContentToPt", VoidType, [((goTy, "envContent")), (pType goTy, "envPt")])
-         ("extractEnvContentFromPt", goTy, [(pType goTy, "envPt")]),
-         ("ExtractEnvshellfromcls", goTy, [(goTy, "cls")])]
+         ("closureCons", goTy, [(gft, "f"), ((goTy), "env")]),
+         ("initContStack", goTy, [(goTy, "entrance"), (goTy, "exit")]),
+         ("setEnvContentToPt", VoidType, [((goTy, "envContent")), (goTy, "envPt")])
+         ("extractEnvContentFromPt", goTy, [(goTy, "envPt")]),
+         ("ExtractEnvshellfromcls", goTy, [(goTy, "cls")]),
+         ("extractSumType", goTy, [(goTy, "sum")]),
+         ("CHECKFIXNODENECESSARY", goTy, [(goTy, "fixnode"), (goTy, "maybe")])]
 
     
     store :: Operand -> Operand -> Codegen Operand
@@ -220,17 +224,17 @@ module ToLLVM where
     load :: Operand -> Codegen Operand
     load ptr = instr $ Load False ptr Nothing 0 []
 
-    addEnv :: Integer -> Codegen Operand
-    addEnv 1 = callinternalFun "addEnv"
-    addEnv n = 
-        callinternalFun "addEnv" >> addEnv (n - 1)
+    addEnv :: Integer -> Operand -> Codegen Operand
+    addEnv 1 x = callinternalFunWithArg (goTy) "addEnv" [x]
+    addEnv n x = 
+        callinternalFunWithArg (goTy) "addEnv" [x] >> addEnv (n - 1)
     
 
     getEnvshellatEnvloc :: Envloc -> Codegen Operand
     getEnvshellatEnvloc 0 = load envPt
     getEnvshellatEnvloc n = do {
         spt <- getEnvshellatEnvloc (n - 1)
-        callinternalFunWithArg (pType goTy) "prevEnvptByEnvshell" [spt]
+        callinternalFunWithArg (goTy) "prevEnvshellByEnvshell" [spt]
         }
 
     setEnvContentToPt :: Operand -> Operand -> Codegen Operand
@@ -258,28 +262,32 @@ module ToLLVM where
         callinternalFunWithArg (goTy) "constInteger" [cint i]
     cgenValue (VDeclare i ty) = do
         getexternSchmidty i ty
-    cgenValue (VClosure labelno envloc) =
-        callinternalFunWithArg (goTy) "closureCons" [labelnof, cint envloc]
+    cgenValue (VClosure labelno envloc) = do
+        envShell <- getEnvshellatEnvloc envloc
+        callinternalFunWithArg (goTy) "closureCons" [labelnof, envShell]
         where labelnof = 
                     ConstantOperand .
                     GlobalReference (FunctionType retType [] False) .
                     mkName . ("LABEL" ++ ) $ labelno
-    cgenValue (VContStack regnum entry out _) = do
+    cgenValue (VContStack envloc entry out _) = 
+                entrance <- cgenValue (VClosure entry envloc)
                 out' <- cgenValue out
-                callinternalFunWithArg goTy "initContStack" [regnum', labelOfEntry, out']
+                callinternalFunWithArg goTy "initContStack" [entrance, out']
         where labelOfEntry = 
                     ConstantOperand .
                     GlobalReference (FunctionType retType [] False) .
                     mkName . ("LABEL" ++ ) $ entry
-              regnum' = 
-                ConstantOperand . 
-                Int machinebit regnum
 
     cgenValue x = return . constantReg $ x
 
     tcall :: Integer -> String -> Codegen ()
-    tcall n x = 
-        init n >>= \args -> instr $ Call (Just Tail) CC.C [] (Right x') args [] []
+    tcall n x = do
+                args <- init n 
+                result <- instr $ Call Nothing CC.C [] (Right x') args [] []
+                cont <- load $ regPt n
+                store (regPt 0) cont
+                store (regPt 1) result
+            >> (cgenStatement APP)
         where init 0 = return []
               init n = do 
                 l <- init (n - 1)
@@ -287,7 +295,7 @@ module ToLLVM where
                 return (l ++ [t])
               argsTys = map snd . zip [1..n] . repeat $ goTy
               x' = ConstantOperand . 
-                   GlobalReference (FunctionType retType argsTys False) .
+                   GlobalReference (FunctionType goTy argsTys False) .
                    mkName . show $ x
 
     cgenStatement :: MachL -> Codegen ()
@@ -342,30 +350,64 @@ module ToLLVM where
         store envPt envShell
     }
 
-    cgenStatement (AddEnv i) = addEnv i
-    
-    cgenStatement APP = 
-        load (regPt 0) >>= 
-            \f -> callinternalFunWithArg retType "APP" [f]
-
-    cgenStatement (JUMPBACKCONT i) = do {
-        envContent <- getEnvContentFromEnvloc i
-        callinternalFunWithArg retType "JUMPBACKCONT" [envContent]
+    cgenStatement (AddEnv i) = do {
+        envShell <- load envPt
+        newShell <- addEnv i envShell
+        store envPt newShell
     }
+    
+    cgenStatement APP = do 
+        cls <- load $ regPt 0
+        clsenvpt <- callinternalFunWithArg (goTy) "ExtractEnvshellfromcls" [cls]
+        store envPt clsenvpt
+        callinternalFunWithArg retType "APP" [cls]
+
+    cgenStatement (JUMPBACKCONT i) = do 
+        envContent <- getEnvContentFromEnvloc i
+        cont <- callinternalFunWithArg goTy "JUMPBACKCONT" [envContent]
+        store (regPt 0) cont
+        >> (cgenStatement APP)
+
+    cgenStatement (CHECKFIXNODENECESSARY i) = do
+        fixnodeContent <- getEnvContentFromEnvloc i
+        maysubst <- load $ regPt 1
+        shouldbe <- callinternalFunWithArg goTy "CHECKFIXNODENECESSARY" [fixnodeContent, maysubst]
+        setEnvContentToEnvloc shouldbe i
 
     cgenStatement (GOTOEVALBIND i r1) = do 
         envContent <- getEnvContentFromEnvloc i
-        rct <- load $ regPt r1
-        callinternalFunWithArg retType "GOTOEVALBIND" [envContent, rct]
-    
+        maybecont <- load $ (regPt r1)
+        cont <- callinternalFunWithArg goTy "GOTOEVALBIND" [envContent, maybecont]
+        store (regPt 0) cont
+        >> (cgenStatement APP)
 
     cgenStatement (ADDCONTSTACKIFEXIST i r1) = do 
         envContent <- getEnvContentFromEnvloc i
         rct <- load $ regPt r1
         callinternalFunWithArg retType "ADDCONTSTACKIFEXIST" [envContent, rct]
     
+    cgenStatement (IFJUMP) = do
+        crit <- load $ regPt 1
+        tb <- load $ regPt 2
+        fb <- load $ regPt 3
+        cb <- callinternalFunWithArg goTy "IFJUMP" [crit, tb, fb]
+        store (regPt 0) cb
+        >> (cgenStatement APP)
 
-
+    cgenStatement (CASEJUMP) = do 
+            {
+            crit <- load $ regPt 1
+            lb <- load $ regPt 2
+            rb <- load $ regPt 3
+            cont <- load $ regPt 4
+            x <- callinternalFunWithArg goTy "extractSumType" [crit]
+            cb <- callinternalFunWithArg goTy "CASEJUMP" [crit, lb, rb]
+            store (regPt 0) cb
+            store (regPt 1) x
+            store (regPt 2) cont
+            }
+            >> (cgenStatement APP)
+        
 
     cgenStatement x = 
         tcall nx x
@@ -380,6 +422,4 @@ module ToLLVM where
                  (BEQ, 3),
                  (LEFT, 2),
                  (RIGHT, 2)
-                 (IFJUMP, 3),
-                 (CASEJUMP, 4)
                 ]

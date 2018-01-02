@@ -119,12 +119,13 @@ module AbsMachine where
             eventualKont <- machl' cont
             evalBind <- machl bind
             labelOfevalBind <- addnewfun evalBind
-            let endEvalBind = [JUMPBACKCONT 1] 
+            let endEvalBind = 
+                    [CHECKFIXNODENECESSARY 1,
+                    JUMPBACKCONT 1] 
             labelOfendEvalBind <- addnewfun endEvalBind
             return $
                 [AddEnv 2,
-                 EnvptToReg (reg 1),
-                 SetEnv 1 (VContStack (reg 1) labelOfevalBind eventualKont []),
+                 SetEnv 1 (VContStack 0 labelOfevalBind eventualKont []),
                  SetEnv 0 (VClosure labelOfendEvalBind 0),
                  GOTOEVALBIND 1 
                 ]
@@ -133,9 +134,10 @@ module AbsMachine where
     machl (TFFixC (EVar i) cont) = do
             closureOfCont <- machl' cont
             return $ 
-                [SetReg (reg 2) closureOfCont,
-                ADDCONTSTACKIFEXIST i (reg 2),
-                GOTOEVALBIND i
+                [SetReg (reg 3) closureOfCont,
+                ADDCONTSTACKIFEXIST i (reg 3),
+                SetEnvReg i (reg 1),
+                GOTOEVALBIND i (reg 3)
                 ]
     
     

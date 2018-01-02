@@ -65,7 +65,7 @@ module IRep where
         --- Construct a closure with Integer as label name
         --- Envloc as the environment with closure, with Envloc back
         | VClosure Integer Envloc
-        | VContStack Env Entrance Value [Value]
+        | VContStack Envloc Entrance Value [Value]
         --- Responsible for the evaluation of letrec
         --- Here 'Value' must be the VClosure
         deriving (Show, Eq)
@@ -103,16 +103,20 @@ module IRep where
         | CASEJUMP
         --- About Evaluation of fixpoint
         | JUMPBACKCONT Envloc
+        --- Check fixnode at envloc if need to subst
+        ---- if it is, it will be subst
+        | CHECKFIXNODENECESSARY Envloc
         --- JUMPBACKCONT is different from below two
         --- Below two still have to work even 
         ----- the evaluation of binding finishes
         ----- So GOTOEVALBIND is actually doing differently 
         ----- if envloc has a 
         ----- VContStack and not have one
-        | GOTOEVALBIND Envloc
+        | GOTOEVALBIND Envloc Register
         ----- ADDCONTSTACKIFEXIST will add register into stack of
         ----- envloc if stack is there, or do nothing
         | ADDCONTSTACKIFEXIST Envloc Register
+        | EXTRACTINFOIFNOTSTACK Envloc Register
         deriving (Show, Eq)
 
 
