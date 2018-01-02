@@ -2,7 +2,9 @@ module Parsing2 (preparserToparenthesis,parser, parser', SStruc(..)) where
 
 
 import Text.ParserCombinators.ReadP
+
 import Data.List
+import Data.Char
 
 data SStruc =
   SAtom String
@@ -59,13 +61,13 @@ parserChar = do
   (char '\'')
   x <- satisfy (/= '\"')
   (char '\'')
-  return . SChar . ord $ x
+  return . SChar . fromIntegral . ord $ x
 
 parserNumber = do
   x <- many1 $ number
   return . SNum $ read x
 
-parserExp = parserList <++ parserQuote <++ parserChar <++ parserNumber <++ parserAtom
+parserExp = parserList <++ parserChar <++ parserNumber <++ parserAtom
 
 parser' :: String -> [(SStruc,String)]
 parser' = readP_to_S (optionalspaces >> parserExp) 

@@ -1,5 +1,5 @@
 module NameEli where
-
+    import AST
     import IRep
 
     data UniId = NId Id | CId Id deriving (Show, Eq)
@@ -10,9 +10,9 @@ module NameEli where
     nameEli' :: UniLexi -> EForm -> EForm
     nameEli' c (EVar i) = EVar $ dictLoc' c (NId i)
     nameEli' c (ECVar i) = EVar $ dictLoc' c (CId i)
-    nameEli' c (EFunC i (Cont j) T body) =
+    nameEli' c (EFunC i (Cont j) ty body) =
         let c' = addDict (addDict c (NId i) 0) (CId j) 0
-        in EFunC 1 (Cont 0) T (nameEli c' body)
+        in EFunC 1 (Cont 0) ty (nameEli c' body)
 
     nameEli' c (ECont (Cont i) body) =
         let c' = addDict c (CId i) 0
@@ -43,22 +43,22 @@ module NameEli where
         TFApp (nameEli' c f) (nameEli' c x)
 
     nameEli c (TFAppc f x cont) =
-        TFApp (nameEli' c f) (nameEli' c x) (nameEli' c cont)
+        TFAppc (nameEli' c f) (nameEli' c x) (nameEli' c cont)
 
-    nameEli c (TFixApp itself retCall evBind cont) =
+    nameEli c (TFixApp itself (Cont retCall) evBind cont) =
         let c' = addDict (addDict c (NId itself) 0) (CId retCall) 0 
-        in TFixApp i ret (nameEli c' evBind) (nameEli' c cont)
+        in TFixApp itself (Cont retCall) (nameEli c' evBind) (nameEli' c cont)
 
     nameEli c (TFFixC i cont) =
         TFFixC (nameEli' c i) (nameEli' c cont)
 
     nameEli c (TFLet i ty bind body) =
         let c' = addDict c (NId i) 0
-        in TFLet i T (nameEli' c bind) (nameEli c' body)
+        in TFLet i ty (nameEli' c bind) (nameEli c' body)
     
     nameEli c (TFLetExt i ty body) =
         let c' = addDict c (NId i) 0
-        in TFLetExt i T (nameEli c' body)
+        in TFLetExt i ty (nameEli c' body)
     
     nameEli c (TFBEQ a b cont) =
         TFBEQ (nameEli' c a) (nameEli' c b) (nameEli' c cont)
@@ -72,9 +72,6 @@ module NameEli where
     nameEli c (TFCase x lb rb cont) =
         TFCase (nameEli' c x) (nameEli' c lb) (nameEli' c rb) (nameEli' c cont)
 
-    nameEli c (TFLetRcd cons ty suty rcd body) =
-        let c' = addDict c (NId cons) 0
-        in TFLetRcd cons ty suty rcd (nameEli c' body)
 
     nameEli c (TFSeq pre post) =
         TFSeq (nameEli c pre) (nameEli c post)

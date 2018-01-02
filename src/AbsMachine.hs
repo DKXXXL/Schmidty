@@ -1,11 +1,13 @@
 module AbsMachine where
+    import Control.Monad.State.Lazy
     import AST
+    import IRep
     
 
     data ABSS = ABSS {
-        LABELNO :: Integer,
-        FUNS :: [MLabel],
-        DECLARE :: Dict Id Id
+        labelNO :: Integer,
+        functions :: [MLabel],
+        declare :: Dict Id Id
     } deriving (Show, Eq) 
     type ABSM = State ABSS
 
@@ -14,19 +16,16 @@ module AbsMachine where
 
     toAbsMachL :: Dict Id Id -> TForm -> [MLabel]
     toAbsMachL predecl tf = (MLabel 0 mainRunning):fs
-        where (mainRunning, fs) = runState (machl tf) (initialState predecl)
+        where (mainRunning, ABSS _ fs _) = runState (machl tf) (initialState predecl)
 
-
-    accLabel :: Integer -> ABSM ()
-    accLabel x = modify $ \absm -> absm {LABELNO = labelno + x}
 
     addnewfun :: [MachL] -> ABSM Integer
     addnewfun f = do {
-        labelnow <- gets LABELNO;
-        funs <- gets FUNS;
+        labelnow <- gets labelNO;
+        funs <- gets functions;
         modify $ \absm -> absm {
-            LABELNO = labelnow + 1,
-            FUNS = (MLabel labelnow f):funs
+            labelNO = labelnow + 1,
+            functions = (MLabel labelnow f):funs
             };
         return labelnow
     }
@@ -34,7 +33,9 @@ module AbsMachine where
     
     mapEFormToRegs :: [EForm] -> [Integer] -> ABSM [MachL]
     mapEFormToRegs eforms regs = 
-        (flip mapValueToRegs regs). mapM machl' $ eforms
+        ( >>= (return . (flip mapValueToRegs regs))). 
+        (mapM machl') $ eforms
+        -- (mapM machl') :: [EForm] -> ABSM [Value]
      {-  where connectState :: [ABSM EForm] -> ABSM [EForm]
               connectState [] = return []
               connectState (x:xs) = 
@@ -42,7 +43,7 @@ module AbsMachine where
               states :: [ABSM EForm]
               states = map machl' eforms -}
     mapValueToRegs :: [Value] -> [Integer] -> [MachL]
-    mapValueToRegs = (map (\(x,y) -> mapValueToReg)) . zip
+    mapValueToRegs a b = (map (\(x,y) -> mapValueToReg x y)) $ zip a b
 
     mapValueToReg :: Value -> Integer -> MachL
     mapValueToReg a b = (SetReg (reg b) a)
@@ -58,10 +59,10 @@ module AbsMachine where
         labeltrue <- addnewfun tb';
         labelfalse <- addnewfun fb';
         return $
-        (mapValueToReg [crit', 
+        (mapValueToRegs [crit', 
                         VClosure labeltrue 0, 
                         VClosure labelfalse 0]
-                       [1, 2, 3]) ++
+                        [1, 2, 3]) ++
         [IFJUMP]
         }
     
@@ -114,57 +115,52 @@ module AbsMachine where
             return (init ++ [APP])
         }
 
-    machl (TFixApp i outevalbind bind cont) =
-        do {
+    machl (TFixApp i outevalbind bind cont) = do 
             eventualKont <- machl' cont
             evalBind <- machl bind
             labelOfevalBind <- addnewfun evalBind
             let endEvalBind = [JUMPBACKCONT 1] 
             labelOfendEvalBind <- addnewfun endEvalBind
             return $
-            [AddEnv 2,
-             EnvptToReg (reg 1)
-             SetEnv 1 (VContStack (reg 1) labelOfevalBind eventualKont []),
-             SetEnv 0 (VClosure labelOfendEvalBind 0),
-             GOTOEVALBIND 1
-            ]
-        }
+                [AddEnv 2,
+                 EnvptToReg (reg 1),
+                 SetEnv 1 (VContStack (reg 1) labelOfevalBind eventualKont []),
+                 SetEnv 0 (VClosure labelOfendEvalBind 0),
+                 GOTOEVALBIND 1 
+                ]
+        
 
-    machl (TFFixC (EVar i) cont) =
-        do {
+    machl (TFFixC (EVar i) cont) = do
             closureOfCont <- machl' cont
             return $ 
-            [SetReg (reg 2) closureOfCont,
-             ADDCONTSTACKIFEXIST i (reg 2),
-             GOTOEVALBIND i (reg 2)
-            ]
-        }
+                [SetReg (reg 2) closureOfCont,
+                ADDCONTSTACKIFEXIST i (reg 2),
+                GOTOEVALBIND i
+                ]
     
-    machl (TFLet i ty bind body) =
-        do {
+    
+    machl (TFLet i ty bind body) =do 
             bind' <- machl' bind
             body' <- machl body
             return $ 
-            [AddEnv 1,
-             SetEnv 0 bind',
-             ] ++ body'
-        }
+                [AddEnv 1,
+                SetEnv 0 bind'
+                ] ++ body'
+        
 
-    machl (TFLetExt i ty body) =
-        do {
-            dict <- gets DECLARE
+    machl (TFLetExt i ty body) =do 
+            dict <- gets declare
             body' <- machl body
-            let extName = checkDict dict i
+            let extName = case checkDict dict i of Just x -> x
             return $ 
-            [AddEnv 1,
-             SetEnv 0 (VDeclare extName ty)] ++
-             body'
-        }
-    machl (TFBEQ a b cont) =
-        do {
+                [AddEnv 1,
+                SetEnv 0 (VDeclare extName ty)] ++
+                body'
+        
+    machl (TFBEQ a b cont) =do 
             init <- mapEFormToRegs [a, b, cont] [1, 2, 3];
             return (init ++ [BEQ])
-        }
+        
 
     machl (TFLeft x cont) =
         do {
@@ -175,7 +171,7 @@ module AbsMachine where
     machl (TFRight x cont) =
         do {
             init <- mapEFormToRegs [x, cont] [1, 2];
-            return (init ++ [Right])
+            return (init ++ [RIGHT])
         }
 
     machl (TFCase x lf rf cont) =
@@ -184,63 +180,60 @@ module AbsMachine where
             return (init ++ [CASEJUMP])
         }
 
-    machl (TFLetRcd cons ty suty rcd body) =
-        do {
-            body' <- machl body
-            return $ 
-            [AddEnv 1,
-             SetEnv 0 (VConstructor ty)] ++
-             body'
-        }
-    machl (TFSeq pre post) =
-        do {
+        
+    machl (TFSeq pre post) = do 
             pre' <- machl pre
             post' <- machl post
             return $ pre' ++ post'
-        }
 
     machl' :: EForm -> ABSM Value
     machl' ENone = return VNone
-    machl' (EVar i) = return VVar i
+    machl' (EVar i) = return $ VVar i
     machl' (ECVar _) = error "Not Supposed to find ECVAR"
     machl' EZero = return VZero
     machl' (EInt i) = return $ VInt i
     machl' ETrue = return VTrue
     machl' EFalse = return VFalse
-    machl' (EFunc i cont ty body) =
-        do {
+    machl' (EFunC i cont ty body) =do 
             funbody <- machl body
             let bodywithInit = 
-                [AddEnv 2,
-                 SetEnvReg 0 2,
-                 SetEnvReg 1 1] 
-                ++ funbody
+                    [AddEnv 2,
+                    SetEnvReg 0 2,
+                    SetEnvReg 1 1] 
+                    ++ funbody
             labelnow <- addnewfun bodywithInit
             return $ VClosure labelnow 0
-        }
+        
 
-    machl' (ECont cont body) = 
-        do {
+    machl' (ECont cont body) = do 
             funbody <- machl body
             let bodywithInit = 
-                [AddEnv 1,
-                 SetEnvReg 0 1] 
-                ++ funbody
+                    [AddEnv 1,
+                    SetEnvReg 0 1] 
+                    ++ funbody
             labelnow <- addnewfun bodywithInit
             return $ VClosure labelnow 0
-        }
+        
+    machl' EndCont = do
+            let bodywithInit =
+                    [AddEnv 1,
+                     SetEnvReg 0 1]
+            labelnow <- addnewfun bodywithInit
+            return $ VClosure labelnow 0
 
-    machl' (EField ty i) = do {
+    machl' (EField ty i) = do 
         let body = [
-            ExtractEnvptfromclsToReg (reg 1) (reg 1),
-            RegToEnvpt (reg 1),
-            SetRegEnv (reg 1) i,
-            SetRegReg (reg 0) (reg 2),
-            APP
-        ]
+                ExtractEnvptfromclsToReg (reg 1) (reg 1),
+                RegToEnvpt (reg 1),
+                SetRegEnv (reg 1) i,
+                SetRegReg (reg 0) (reg 2),
+                APP
+                ]
         labelnow <- addnewfun body
         return $ VClosure labelnow 0
-    }
+
+    
+    
     
 
     

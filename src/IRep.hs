@@ -2,9 +2,10 @@ module IRep where
     import AST
     --- CPS style
     data EForm =
-        | ENone
+        ENone
         | EVar Id
         | ECVar Id
+        | EChr Integer
         | EZero
         | EInt Integer
         | ETrue
@@ -12,11 +13,12 @@ module IRep where
         | EFunC Id Cont Ty TForm
         | ECont Cont TForm 
         | EField Ty Id
+        | EndCont
 
     newtype Cont = Cont Id
         
     data TForm =
-        | TFIf EForm TForm TForm
+        TFIf EForm TForm TForm
         | TFSuc EForm EForm
         | TFDec EForm EForm
         | TFNGT EForm EForm EForm
@@ -52,7 +54,7 @@ module IRep where
     --- Environment Pointer
 
     data Value =
-        | VNone
+        VNone
         | VZero
         | VInt Integer
         | VTrue
@@ -70,7 +72,7 @@ module IRep where
     
 
     data MachL =
-        | SetRegReg Register Register
+        SetRegReg Register Register
         | SetRegEnv Register Envloc
         | SetEnvReg Envloc Register
         | SetEnvEnv Envloc Envloc
@@ -106,14 +108,18 @@ module IRep where
         ----- So GOTOEVALBIND is actually doing differently 
         ----- if envloc has a 
         ----- VContStack and not have one
-        | GOTOEVALBIND Envloc Register
+        | GOTOEVALBIND Envloc
         ----- ADDCONTSTACKIFEXIST will add register into stack of
         ----- envloc if stack is there, or do nothing
         | ADDCONTSTACKIFEXIST Envloc Register
         deriving (Show, Eq)
 
 
-    data MLabel = MLabel Integer [MachL]
+    data MLabel = MLabel Integer [MachL] 
+            deriving Show
+
+    instance Eq MLabel where
+        (MLabel i _) == (MLabel j _) = i == j
 
     instance Ord MLabel where
         (MLabel i _) `compare` (MLabel j _) = i `compare` j

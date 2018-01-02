@@ -1,15 +1,15 @@
 module Typing where
 
-    import AST
+import AST
 
-type RecordInfo = (Ty* [(Id* Ty)])
+type RecordInfo = (Ty, [(Id, Ty)])
 type CustomedTypeDict = Dict TyId RecordInfo 
 -- type TypeAliases = Dict TyId Ty
 type VarTypeDict = Dict Id Ty 
 
 subtyOf :: CustomedTypeDict -> Ty -> Ty -> Bool
 subtyOf d h1 h2 = if (h1 == h2) 
-                    then true 
+                    then True
                     else (subtypeOf' d h1 h2)
 
 subtypeOf' :: CustomedTypeDict -> Ty -> Ty -> Bool
@@ -18,7 +18,7 @@ subtypeOf' d (TFun i o) (TFun i' o') =
 subtypeOf' d (TSum a b) (TSum a' b') =
     (subtyOf d a a') && (subtyOf d b b')
 subtypeOf' d (TVar sub) super =
-    let supOfSub, _ = checkDict d sub
+    let (Just (supOfSub, _)) = checkDict d sub
     in subtyOf d supOfSub super
 subtypeOf' _ _ _ = False
 
@@ -30,7 +30,7 @@ has_type' :: CustomedTypeDict ->
              VarTypeDict ->
              Tm -> Maybe Ty
 
-has_type' _ _ MNone = TNone
+has_type' _ _ MNone = Just TNone
 
 has_type' tyd vd (MIf crit bA bB) =
         case (has_type' tyd vd crit) 
@@ -93,22 +93,21 @@ has_type' tyd vd (MFun i tyI tm) =
         >>= (\tyO -> return (TFun tyI tyO))
 has_type' tyd vd (MApp f x) = 
     let tyInCtx = has_type' tyd vd
-    in do {
-        fT <- tyInCtx f;
-        xT <- tyInCtx x;
+    in do 
+        fT <- tyInCtx f
+        xT <- tyInCtx x
         case fT of (TFun tyI tyO) ->
-            if (subtyOf tyd xT tyI) then Just tyO else Nothing
-    }
+                        if (subtyOf tyd xT tyI) then Just tyO else Nothing
+    
 
-has_type' tyd vd (MLet i T bind body) =
-    let newd = addDict vd i T
+has_type' tyd vd (MLet i ty bind body) =
+    let newd = addDict vd i ty
     in (has_type' tyd newd bind) 
-        >>= (\bindty -> if (subtyOf tyd bindty T) then has_type' tyd newd body else Nothing)
+        >>= (\bindty -> if (subtyOf tyd bindty ty) then has_type' tyd newd body else Nothing)
 
-has_type' tyd vd (MLetExt i T body) =
-    let newd = addDict vd i T
-    in (has_type' tyd newd bind) 
-        >>= (\bindty -> has_type' tyd newd body)
+has_type' tyd vd (MLetExt i ty body) =
+    let newd = addDict vd i ty
+    in (has_type' tyd newd body)
 
 
 has_type' _ _ MTrue =
@@ -127,47 +126,47 @@ has_type' tyd vd (MBEQ a b) =
             else Nothing
         }
 
-has_type' tyd vd (MLeft l RT) =
+has_type' tyd vd (MLeft l rty) =
     (has_type' tyd vd l) 
-    >>= (\LT -> return (TSum LT RT))
+    >>= (\lty -> return (TSum lty rty))
 
-has_type' tyd vd (MRight LT r) =
+has_type' tyd vd (MRight lty r) =
     (has_type' tyd vd r) 
-    >>= (\RT -> return (TSum LT RT))
+    >>= (\rty -> return (TSum lty rty))
 
 has_type' tyd vd (MCase crit bA bB) =
     let tyInCtx = has_type' tyd vd
-    in do {
-        critia <- tyInCtx crit;
-        tybA <- tyInCtx bA;
-        tybB <- tyInCtx bB;
-        case critia of (TSum LT RT) ->
-            case tybA of (TFun IT OT) ->
-                case tybB of (TFun IT' OT') ->
-                  if((LT == IT) && (RT == IT'))
-                    then if (subtyOf tyd OT OT') then Just OT'
-                            if (subtyOf tyd OT' OT) then Just OT
-                                else Nothing
-                    else Nothing
-                            _ -> Nothing
-                         _ -> Nothing
+    in do 
+        critia <- tyInCtx crit
+        tybA <- tyInCtx bA
+        tybB <- tyInCtx bB
+        case critia of (TSum lty rty) ->
+                        case tybA of (TFun iT oT) ->
+                                        case tybB of (TFun iT' oT') ->
+                                                        if((lty == iT) && (rty == iT'))
+                                                        then if (subtyOf tyd oT oT') 
+                                                                    then Just oT'
+                                                                    else if (subtyOf tyd oT' oT) 
+                                                                        then Just oT
+                                                                        else Nothing
+                                                        else Nothing
+                                                     _ -> Nothing
+                                     _ -> Nothing
                        _ -> Nothing
-    }
+    
 
 has_type' tyd vd (MLetRcd cName tyName suTy record body) =
-    let consTy = tyListToProd $ ((map fst record)++ (TVar tyName))
-        _, suprecord = checkDict tyd suTy
+    let consTy = tyListToProd $ ((map snd record) ++ [TVar tyName])
     in  if ((suTy == TNone) 
         || (checkSubtyping tyd record suprecord))
-        then has_type (addDict tyd tyName (suTy, record)) (addDict vd cName consTy) body
+        then has_type' (addDict tyd tyName (suTy, record)) (addDict vd cName consTy) body
         else Nothing
+        where (Just (_, suprecord)) = case suTy of (TVar s) -> checkDict tyd s
 
-has_type' tyd vd (MField (TVar tyid) fieldId) =
-    do {
-        rcdInf <- checkDict tyd tyid;
-        fieldType <- checkDict rcdInf fieldId;
+has_type' tyd vd (MField (TVar tyid) fieldId) = do
+        (_, rcdInf) <- checkDict tyd tyid
+        fieldType <- checkDict rcdInf fieldId
         return (TFun (TVar tyid) fieldType)
-    }
 
 has_type' tyd vd (MField _ _) = Nothing
 

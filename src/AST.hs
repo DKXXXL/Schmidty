@@ -1,11 +1,14 @@
 module AST where
 
+import Data.IORef
+import Data.Char
+
 type Id = Integer
 type TyId = Id
 type InferId = Id
 
 data Ty = 
-    | TNat
+    TNat
     | TChr
     | TFun Ty Ty 
     | TBool
@@ -23,7 +26,7 @@ data Ty =
 
 
 data Tm =
-    | MNone
+    MNone
     | MIf Tm Tm Tm
     | MVar Id
     | MZero
@@ -59,17 +62,19 @@ data Tm =
 
 type Dict k v = [(k, v)]
 
-checkDict :: Dict k v -> k -> Maybe v 
+checkDict ::Eq k => Dict k v -> k -> Maybe v 
 checkDict ((a, b): dict') k = if (a == k) then Just b else (checkDict dict' k)
 checkDict [] _ = Nothing
 
 addDict :: Dict k v -> k -> v -> Dict k v 
 addDict h a b = (a, b) : h
 
-dictLoc :: Dict k v -> k -> Maybe Integer
+dictLoc :: Eq k => Dict k v -> k -> Maybe Integer
 dictLoc [] x = Nothing
 dictLoc ((a, b):d) x = 
-    if (a == x) then 0 else (1 + (dictLoc d x))
+    if (a == x) 
+        then Just 0 
+        else (dictLoc d x) >>= \y -> return (y + 1)
 
 dictLoc' d x = case dictLoc d x of Nothing -> error "Unfound value"
                                    Just i -> i
@@ -89,7 +94,7 @@ varNameToid (x:[]) = toInteger . ord $ x
 varNameToid (x:s) = (toInteger . ord $ x) + (varNameToid s) * 128
 idToVarName :: Id -> String
 idToVarName i = 
-    if (i `div` 128) > 0 then [chr i] 
-    else (chr (i `mod` 128)):(idToVarName (i `div` 128))
+    if (i `div` 128) > 0 then [chr $ fromIntegral i] 
+    else (chr $ fromIntegral (i `mod` 128)):(idToVarName (i `div` 128))
 
 

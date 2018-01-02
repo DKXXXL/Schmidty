@@ -63,16 +63,16 @@ module ToLLVM where
     type SymbolTable = [(String, Operand)]
 
     data CodegenState
-    = CodegenState {
-    block        :: BlockState  -- Blocks for function
-    , count      :: Word                     -- Count of unnamed instructions
-    , extfuns    :: [String]
-    } deriving Show
+        = CodegenState {
+        block        :: BlockState  -- Blocks for function
+        , count      :: Word                     -- Count of unnamed instructions
+        , extfuns    :: [String]
+        } deriving Show
 
     data BlockState
-    = BlockState {
-    stack :: [Named Instruction]            -- Stack of instructions
-    } deriving Show
+        = BlockState {
+        stack :: [Named Instruction]            -- Stack of instructions
+        } deriving Show
 
     retType :: Type
     retType = VoidType
@@ -115,7 +115,7 @@ module ToLLVM where
     addDefn :: Definition -> LLVM ()
     addDefn d = do {
         defs <- gets moduleDefinition
-        modify $ \s -> s {moduleDefinition defs ++ [d]}
+        modify $ \s -> s {moduleDefinition = defs ++ [d]}
     }
 
 
@@ -150,14 +150,14 @@ module ToLLVM where
     
 
     instr :: Instruction -> Codegen (Operand)
-    instr ins = do {
-      n <- fresh
-      let ref = (UnName n)
-      blk <- gets block
-      let i = stack blk
-      modifyBlock (blk { stack = (ref := ins) : i } )
-      return $ local ref
-      }
+    instr ins = do 
+            n <- fresh
+            let ref = (UnName n)
+            blk <- gets block
+            let i = stack blk
+            modifyBlock (blk { stack = (ref := ins) : i } )
+            return $ local ref
+        
       where modifyBlock :: BlockState -> Codegen ()
             modifyBlock x = do
                 modify $ \s -> s {block = x}
@@ -261,16 +261,16 @@ module ToLLVM where
     cgenValue (VClosure labelno envloc) =
         callinternalFunWithArg (goTy) "closureCons" [labelnof, cint envloc]
         where labelnof = 
-            ConstantOperand .
-            GlobalReference (FunctionType retType [] False) .
-            mkName . ("LABEL" ++ ) $ labelno
+                    ConstantOperand .
+                    GlobalReference (FunctionType retType [] False) .
+                    mkName . ("LABEL" ++ ) $ labelno
     cgenValue (VContStack regnum entry out _) = do
-        out' <- cgenValue out
-        callinternalFunWithArg goTy "initContStack" [regnum', labelOfEntry, out']
+                out' <- cgenValue out
+                callinternalFunWithArg goTy "initContStack" [regnum', labelOfEntry, out']
         where labelOfEntry = 
-            ConstantOperand .
-            GlobalReference (FunctionType retType [] False) .
-            mkName . ("LABEL" ++ ) $ entry
+                    ConstantOperand .
+                    GlobalReference (FunctionType retType [] False) .
+                    mkName . ("LABEL" ++ ) $ entry
               regnum' = 
                 ConstantOperand . 
                 Int machinebit regnum
@@ -291,15 +291,15 @@ module ToLLVM where
                    mkName . show $ x
 
     cgenStatement :: MachL -> Codegen ()
-    cgenStatement (SetRegReg r1 r2) = do {
-        i <- load (regPt 2)
-        j <- store (regPt 1) i
-    }
+    cgenStatement (SetRegReg r1 r2) = do 
+                i <- load (regPt 2)
+                store (regPt 1) i
+    
 
-    cgenStatement (SetRegEnv r1 envloc) = do {
-        envContent <- getEnvContentFromEnvloc envloc
-        store (regPt r1) envContent
-    }
+    cgenStatement (SetRegEnv r1 envloc) = do 
+                envContent <- getEnvContentFromEnvloc envloc
+                store (regPt r1) envContent
+    
 
     cgenStatement (SetEnvReg envloc r1) = do {
         i <- load (regPt r1)
@@ -326,11 +326,11 @@ module ToLLVM where
         store envPt newEnvshell
     }
 
-    cgenStatement (ExtractEnvshellfromclsToReg r1 r2) = do {
+    cgenStatement (ExtractEnvshellfromclsToReg r1 r2) = do 
         cls <- load (regPt r1)
         clsenvpt <- callinternalFunWithArg (goTy) "ExtractEnvshellfromcls" [cls]
         store (regPt r2) clsenvpt
-    } 
+    
 
     cgenStatement (EnvptToReg r1) = do {
         envShell <- load envPt
@@ -353,17 +353,17 @@ module ToLLVM where
         callinternalFunWithArg retType "JUMPBACKCONT" [envContent]
     }
 
-    cgenStatement (GOTOEVALBIND i r1) = do {
+    cgenStatement (GOTOEVALBIND i r1) = do 
         envContent <- getEnvContentFromEnvloc i
         rct <- load $ regPt r1
         callinternalFunWithArg retType "GOTOEVALBIND" [envContent, rct]
-    }
+    
 
-    cgenStatement (ADDCONTSTACKIFEXIST i r1) = do {
+    cgenStatement (ADDCONTSTACKIFEXIST i r1) = do 
         envContent <- getEnvContentFromEnvloc i
         rct <- load $ regPt r1
         callinternalFunWithArg retType "ADDCONTSTACKIFEXIST" [envContent, rct]
-    }
+    
 
 
 
