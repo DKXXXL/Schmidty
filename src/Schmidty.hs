@@ -1,9 +1,9 @@
-module Schmidty where
+module Main where
     import AST as AST
     import AbsMachine as AM
     import ToAST as ToAST
-    import ToLLVM as ToLLVM
-    import LLVM.AST as LAST
+--    import ToLLVM as ToLLVM
+--    import LLVM.AST as LAST
     import CPS as CPS
     import IRep as IR
     import NameEli as NE
@@ -13,14 +13,17 @@ module Schmidty where
     import Typing as Ty 
     --- import TypeInfer as Ti
 
+
+    import Data.IORef
+    import System.IO.Unsafe
     import System.IO (stdin, stdout, hPutStr, hGetContents)
 
     toTm :: String -> AST.Tm
-    toTm = ToAST. toAst . M.macroTransformer . P.parser
+    toTm = ToAST.toAst . M.macroTransformer . P.parser
 
     toNameConflictResolution :: AST.Tm -> AST.Tm
     toNameConflictResolution = 
-        NE.typenameConflictResolution . NE.nameConflictResolution
+        NR.tynameConflictResolution . NR.nameConflictResolution
 
     hasType :: AST.Tm -> Maybe AST.Ty
     hasType = Ty.has_type
@@ -33,14 +36,14 @@ module Schmidty where
 
     toAbsMachineL :: ExtDict -> AST.Tm -> [IR.MLabel]
     toAbsMachineL d = 
-        (AM.toAbsMachineL d) . NE.nameElimination . CPS.cpsTransform
-
+         (AM.toAbsMachL d) . NE.nameElimination . CPS.cpsTransform
+{-
     toLLVMModule :: [IR.MLabel] -> LAST.Module
     toLLVMModule = ToLLVM.toLLVMModule
 
     toLLVMAsm :: LAST.Module -> IO ByteString
     toLLVMAsm = ToLLVM.toLLVMAsm
-
+-}
     -------- Declaration Completed.
 
     preCompilation = toNameConflictResolution . toTm
@@ -49,9 +52,9 @@ module Schmidty where
 
     compilation extdict = (toAbsMachineL extdict) . toTmDecoration
 
-    genLLVM = toLLVMAsm . toLLVMModule
+    genLLVM = \x -> x --  toLLVMAsm . toLLVMModule
 
-    compile :: String -> IO ByteString
+    -- compile :: String -> IO ByteString
     compile src =
         let !precompiled = preCompilation src
         in let !extInfo = unsafePerformIO . readIORef $ (NR.us_extDict)
@@ -59,11 +62,11 @@ module Schmidty where
             then genLLVM . (compilation extInfo) $ precompiled
             else error "Type Checking Failed."  
 
-    main :: IO ()
+
     main = do
         input <- hGetContents stdin 
-        let output =  compile input
-        hPutStr stdout output
+        let output = compile input
+        hPutStr stdout (show output)
     
     -- jitRunning :: String -> IO ()
 

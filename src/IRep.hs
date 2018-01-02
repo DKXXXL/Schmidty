@@ -14,8 +14,9 @@ module IRep where
         | ECont Cont TForm 
         | EField Ty Id
         | EndCont
+        deriving Show
 
-    newtype Cont = Cont Id
+    newtype Cont = Cont Id deriving (Show, Eq)
         
     data TForm =
         TFIf EForm TForm TForm
@@ -39,7 +40,7 @@ module IRep where
         | TFCase EForm EForm EForm EForm
 --        | TFLetRcd Id TyId Ty [(Id, Ty)] TForm 
         | TFSeq TForm TForm 
-
+        deriving Show
     --- Machine Style
 
     type Register = Integer
