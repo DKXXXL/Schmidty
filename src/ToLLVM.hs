@@ -116,7 +116,7 @@ module ToLLVM where
     regType = goTy
 
     machinebit :: Word32
-    machinebit = 32
+    machinebit = 64
 
     regPt :: Integer -> Operand
     regPt x = 

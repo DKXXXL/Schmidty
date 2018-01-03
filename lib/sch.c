@@ -1,10 +1,10 @@
 #include "sch.h"
 #include "gc.h"
 
-static GCHandle* gcinfo;
+static GCHandler* gcinfo;
 
 goTy prevEnvshellByEnvshell(goTy envshell) {
-    EnvCore* envcore = (EnvCore*)envShell.cnt.data.pt;
+    EnvCore* envcore = (EnvCore*)envshell.data.pt;
     return *(envcore->prevEnvShell);
 }
 
@@ -61,13 +61,13 @@ goTy JUMPBACKCONT(goTy fixinfo) {
         loopStackNode* pt = stack->stack;
         if(pt->nextlevel == NULL) {
             stack-> stack = NULL;
-            return pt;
+            return pt->cont;
         } else {
             while(pt->nextlevel != NULL 
-                && pt->nextlevel->nextlevel != NULL) {
-                pt = pt->next;
+                && ((loopStackNode*)(pt->nextlevel))->nextlevel != NULL) {
+                pt = pt->nextlevel;
             }
-            goTy ret = pt->nextlevel->cont;
+            goTy ret = ((loopStackNode*)(pt->nextlevel))->cont;
             pt->nextlevel = NULL;
             return ret;
         }
@@ -75,7 +75,7 @@ goTy JUMPBACKCONT(goTy fixinfo) {
 }
 
 goTy GOTOEVALBIND(goTy fixinfo, goTy maybeCont){
-    if(goTy->type == TY_STACK) {
+    if(fixinfo.type == TY_STACK) {
         loopStack* stack = fixinfo.data.pt;
         return stack->entrance;
     } else {
@@ -85,13 +85,14 @@ goTy GOTOEVALBIND(goTy fixinfo, goTy maybeCont){
 
 
 void ADDCONTSTACKIFEXIST(goTy fixinfo, goTy orgcont){
-    if(goTy->type == TY_STACK) {
+    if(fixinfo.type == TY_STACK) {
+        loopStack* stack = fixinfo.data.pt;
         loopStackNode* pt = stack->stack;
         while(pt != NULL && pt->nextlevel != NULL) {
-            pt = pt->next;
+            pt = pt->nextlevel;
         }
-        pt->next = GCALLOC(gcinfo, sizeof(loopStackNode));
-        pt = pt->next;
+        pt->nextlevel = GCAlloc(gcinfo, sizeof(loopStackNode));
+        pt = pt->nextlevel;
         *pt = (loopStackNode){orgcont, NULL};
     }
 }

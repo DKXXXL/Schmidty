@@ -1,4 +1,5 @@
 #include "stdint.h"
+#include "stddef.h"
 #define GINT int64_t
 
 
@@ -25,15 +26,17 @@ typedef struct {
 } Closure;
 
 typedef struct {
+    goTy cont;
+    void* nextlevel;
+} loopStackNode;
+
+typedef struct {
     goTy entrance;
     goTy exit;
     loopStackNode* stack;
 } loopStack;
 
-typedef struct {
-    goTy cont;
-    loopStackNode* nextlevel;
-} loopStackNode;
+
 
 #define TY_EMPTY 0
 #define TY_LEFT 1
