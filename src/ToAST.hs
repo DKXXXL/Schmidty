@@ -26,6 +26,8 @@ module ToAST where
         MLeft (toAst tm) (toType ty) 
     toAst (P.SList ((P.SAtom "right"):ty:tm:[])) =
         MRight (toType ty) (toAst tm)
+    toAst (P.SList ((P.SAtom "Field"):ty:(SAtom id):[])) =
+        MField (toType ty) (varNameToid id)
     toAst (P.SList ((P.SAtom "lambda"):(P.SList ((P.SList ((P.SAtom x):ty:[])):[])):body:[])) =
         MFun (varNameToid x) (toType ty)  (toAst body)
     toAst (P.SList ((P.SAtom "let"):(P.SAtom x):ty:bind:body:[])) =
