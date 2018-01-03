@@ -58,6 +58,7 @@ module IRep where
         VNone
         | VZero
         | VInt Integer
+        | VChr Integer
         | VTrue
         | VFalse
         | VVar Envloc

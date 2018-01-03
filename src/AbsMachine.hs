@@ -127,7 +127,7 @@ module AbsMachine where
                 [AddEnv 2,
                  SetEnv 1 (VContStack 0 labelOfevalBind eventualKont []),
                  SetEnv 0 (VClosure labelOfendEvalBind 0),
-                 GOTOEVALBIND 1 
+                 GOTOEVALBIND 1 (reg 1)
                 ]
         
 
@@ -192,6 +192,7 @@ module AbsMachine where
     machl' ENone = return VNone
     machl' (EVar i) = return $ VVar i
     machl' (ECVar _) = error "Not Supposed to find ECVAR"
+    machl' (EChr i) = return $ VChr i
     machl' EZero = return VZero
     machl' (EInt i) = return $ VInt i
     machl' ETrue = return VTrue

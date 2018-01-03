@@ -2,8 +2,8 @@ module Main where
     import AST as AST
     import AbsMachine as AM
     import ToAST as ToAST
---    import ToLLVM as ToLLVM
---    import LLVM.AST as LAST
+    import ToLLVM as ToLLVM
+    import LLVM.AST as LAST
     import CPS as CPS
     import IRep as IR
     import NameEli as NE
@@ -37,6 +37,7 @@ module Main where
     toAbsMachineL :: ExtDict -> AST.Tm -> [IR.MLabel]
     toAbsMachineL d = 
          (AM.toAbsMachL d) . NE.nameElimination . CPS.cpsTransform
+
 {-
     toLLVMModule :: [IR.MLabel] -> LAST.Module
     toLLVMModule = ToLLVM.toLLVMModule
@@ -52,7 +53,8 @@ module Main where
 
     compilation extdict = (toAbsMachineL extdict) . toTmDecoration
 
-    genLLVM = \x -> x --  toLLVMAsm . toLLVMModule
+    genLLVM = -- toLLVMAsm . 
+         toLLVMModule
 
     -- compile :: String -> IO ByteString
     compile src =
