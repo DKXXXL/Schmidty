@@ -141,6 +141,7 @@ module ToLLVM where
     defReg ty vName = addDefn $
         GlobalDefinition $ globalVariableDefaults {
             name = mkName vName
+            , linkage     = L.External
             , LLVM.AST.Global.type' = ty
         }
     

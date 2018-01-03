@@ -1,5 +1,6 @@
 #include "stdint.h"
 #include "stddef.h"
+#include <stdlib.h>
 #define GINT int64_t
 
 
@@ -38,7 +39,7 @@ typedef struct {
 
 
 
-#define TY_EMPTY 0
+// #define TY_EMPTY 0
 #define TY_LEFT 1
 #define TY_RIGHT 2
 #define TY_ENVCORE 3
@@ -48,7 +49,10 @@ typedef struct {
 #define TY_CHAR 11
 #define TY_BOOL 12
 
-#define EMPTY_GOTY ((goTy){TY_EMPTY, {.cnt=0}})
+#define EMPTY_GOTY ((goTy){TY_INT, {.cnt=0}})
+
+
+#define MEMPOOLSIZE 1024000
 
 
 goTy prevEnvshellByEnvshell(goTy envshell);
@@ -81,3 +85,12 @@ goTy CEQ(goTy x, goTy y);
 goTy BEQ(goTy x, goTy y);
 goTy LEFT(goTy x);
 goTy RIGHT(goTy x);
+
+extern goTy* envPt;
+extern goTy* regPt0;
+extern goTy* regPt1;
+extern goTy* regPt2;
+extern goTy* regPt3;
+extern goTy* regPt4;
+extern goTy* regPt5;
+extern goTy* regPt6;

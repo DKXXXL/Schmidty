@@ -1,6 +1,8 @@
 #include "sch.h"
 #include "gc.h"
 
+
+static GCHandler _gcinfo;
 static GCHandler* gcinfo;
 
 goTy prevEnvshellByEnvshell(goTy envshell) {
@@ -171,3 +173,77 @@ goTy RIGHT(goTy x) {
     *cp = x;
     return (goTy){TY_RIGHT, {.pt=cp}};
 }
+
+
+
+void _gothrough(goTy v, Marker marker, Marked marked);
+
+void gothrough(Marker marker, Marked marked) {
+    _gothrough(*envPt, marker, marked);
+    _gothrough(*regPt0, marker, marked);
+    _gothrough(*regPt1, marker, marked);
+    _gothrough(*regPt2, marker, marked);
+    _gothrough(*regPt3, marker, marked);
+    _gothrough(*regPt4, marker, marked);
+    _gothrough(*regPt5, marker, marked);
+    _gothrough(*regPt6, marker, marked);
+}
+
+#define isliteral(v) ((v).type == TY_INT || (v).type == TY_BOOL || (v).type == TY_CHAR)
+
+
+void _gothrough(goTy v, Marker marker, Marked marked) {
+    if(!isliteral(v) && !marked(v.data.pt)) {
+        marker(v.data.pt);
+        if(v.type == TY_LEFT || v.type == TY_RIGHT) {
+            goTy* pt = v.data.pt;
+            _gothrough(*pt, marker, marked);
+        }else if(v.type == TY_ENVCORE) {
+            EnvCore* pt = v.data.pt;
+            _gothrough(*(pt->prevEnvShell), marker, marked);
+        } else if(v.type == TY_CLOSURE) {
+           
+        } else if(v.type == TY_STACK){
+            loopStack* stack = v.data.pt;
+            loopStackNode* pt = stack->stack;
+            // _gothroughStack(pt, marker, marked);
+            while(pt!= NULL){
+                marker(pt);
+            }
+        }
+    }
+}
+
+extern void LABEL0();
+
+void applyForRegsArea(goTy rk, goTy r0,
+                        goTy r1,goTy r2, 
+                        goTy r3,goTy r4, 
+                        goTy r5,goTy r6, gft cont) 
+{
+    envPt = &rk;
+    regPt0 = &r0;
+    regPt1 = &r1;
+    regPt2 = &r2;
+    regPt3 = &r3;
+    regPt4 = &r4;
+    regPt5 = &r5;
+    regPt6 = &r6;
+    return cont();
+
+}
+
+int main() {
+    void* pool1 = malloc(MEMPOOLSIZE);
+    void* pool2 = NULL; // malloc(MEMPOOLSIZE);
+    Mempool mp1, mp2;
+    mp1.size = MEMPOOLSIZE;
+    mp2.size = 0;
+    mp1.pt = pool1;
+    mp2.pt = pool2;
+    _gcinfo = GCInit(mp1, mp2, gothrough);
+    gcinfo = &_gcinfo;
+
+    LABEL0();
+}
+
