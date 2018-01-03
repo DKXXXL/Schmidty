@@ -104,3 +104,69 @@ goTy CHECKFIXNODENECESSARY(goTy fixinfo, goTy maybe) {
         return fixinfo;
     }
 }
+
+void APP(goTy x) {
+    gft f = x.data.pt;
+    return f();
+}
+
+goTy IFJUMP(goTy crit, goTy tb, goTy fb) {
+    if(crit.data.cnt == 0) {
+        return fb;
+    } else {
+        return tb;
+    }
+}
+
+goTy CASEJUMP(goTy crit, goTy lb, goTy rb, goTy cont) {
+    if(crit.type == TY_LEFT) {
+        return lb;
+    } else {
+        return rb;
+    }
+}
+
+goTy SUC(goTy x) {
+    return (goTy) {TY_INT, {.cnt = x.data.cnt + 1}};
+}
+
+goTy DEC(goTy x) {
+    return (goTy) {TY_INT, {.cnt = x.data.cnt - 1}};
+}
+
+goTy NGT(goTy x, goTy y) {
+    goTy ret = (goTy){TY_BOOL, {.cnt = (x.data.cnt > y.data.cnt)? 1: 0}};
+    return ret;
+}
+
+goTy NEQ(goTy x, goTy y) {
+    goTy ret = (goTy){TY_BOOL, {.cnt = (x.data.cnt == y.data.cnt)? 1: 0}};
+    return ret;
+}
+
+goTy NLT(goTy x, goTy y) {
+    goTy ret = (goTy){TY_BOOL, {.cnt = (x.data.cnt < y.data.cnt)? 1: 0}};
+    return ret;
+}
+
+goTy CEQ(goTy x, goTy y) {
+    goTy ret = (goTy){TY_BOOL, {.cnt = (x.data.cnt == y.data.cnt)? 1: 0}};
+    return ret;
+}
+
+goTy BEQ(goTy x, goTy y) {
+    goTy ret = (goTy){TY_BOOL, {.cnt = (x.data.cnt == y.data.cnt)? 1: 0}};
+    return ret;
+}
+
+goTy LEFT(goTy x) {
+    goTy* cp = GCAlloc(gcinfo, sizeof(goTy));
+    *cp = x;
+    return (goTy){TY_LEFT, {.pt=cp}};
+}
+
+goTy RIGHT(goTy x) {
+    goTy* cp = GCAlloc(gcinfo, sizeof(goTy));
+    *cp = x;
+    return (goTy){TY_RIGHT, {.pt=cp}};
+}
