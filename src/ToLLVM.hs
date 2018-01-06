@@ -7,6 +7,7 @@ module ToLLVM where
 
     import Data.Word
     import Data.ByteString (ByteString, pack)
+    import Data.ByteString.Char8 (unpack)
     import Data.String
     import Data.List
     
@@ -33,6 +34,8 @@ module ToLLVM where
     newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
         deriving (Functor, Applicative, Monad, MonadState CodegenState )
 
+    toLLVMAsm' :: AST.Module -> IO String
+    toLLVMAsm' = liftM unpack . toLLVMAsm
 
     toLLVMAsm :: AST.Module -> IO ByteString
     toLLVMAsm asts =
@@ -108,7 +111,8 @@ module ToLLVM where
     generalObjType :: Type
     generalObjType = 
         StructureType False [(IntegerType machinebit), 
-                             (pType (IntegerType machinebit))]
+                             (pType (IntegerType 8))]
+                             --- i8* is a pointer to union?
 
     goTy = generalObjType
 
@@ -141,9 +145,11 @@ module ToLLVM where
     defReg ty vName = addDefn $
         GlobalDefinition $ globalVariableDefaults {
             name = mkName vName
-            , linkage     = L.External
+            , linkage = L.Common
+            , initializer = Just initial
             , LLVM.AST.Global.type' = ty
         }
+        where initial = Struct Nothing False [Int machinebit 0, Null (IntegerType 8)]
     
     
     defAllRegs = mapM (defReg goTy) . allRegs $ registerNum
@@ -213,7 +219,7 @@ module ToLLVM where
         name        = mkName label
         , linkage     = L.External
         , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
-        , returnType  = goTy
+        , returnType  = retty
         , basicBlocks = []
         }
 
@@ -225,10 +231,16 @@ module ToLLVM where
         return i
     
 
-    
+    modifyBlock :: BlockState -> Codegen ()
+    modifyBlock x = do
+            modify $ \s -> s {block = x}
 
     instr :: Type -> Instruction -> Codegen (Operand)
-    instr VoidType _ = return . cint $ 0
+    instr VoidType ins = do 
+            blk <- gets block
+            let i = stack blk
+            modifyBlock (blk { stack = (Do ins) : i } )
+            return $ cint $ 0
     instr ty ins = do 
             n <- fresh
             let ref = (UnName n)
@@ -237,9 +249,6 @@ module ToLLVM where
             modifyBlock (blk { stack = (ref := ins) : i } )
             return $ local ref
       where local = LocalReference ty
-            modifyBlock :: BlockState -> Codegen ()
-            modifyBlock x = do
-                modify $ \s -> s {block = x}
     
     getexternSchmidty :: Id -> Ty -> Codegen Operand
     getexternSchmidty i ty = do
@@ -254,21 +263,13 @@ module ToLLVM where
         instr ty $ Call (Just Tail) CC.C [] (Right fn) args' [] []
         where fn :: Operand
               fn = ConstantOperand . 
-                    GlobalReference (pType (FunctionType retTys argTys False)) . 
+                    GlobalReference (pType (FunctionType ty argTys False)) . 
                     mkName $ x
               args' = map (\x -> (x, [])) args
-              retTys = (\(x,y,z) -> y) $ signature
               argTys = (map fst) . (\(x,y,z) -> z) $ signature
               signature = head  . filter ((== x). (\(x,y,z)->x)) $ internalFunNames
     
 
-    callinternalFun :: String -> Codegen Operand
-    callinternalFun x = 
-        instr retType $ Call (Just Tail) CC.C [] (Right fn) [] [] []
-        where fn :: Operand
-              fn = ConstantOperand . 
-                    GlobalReference (pType (FunctionType retType [] False)). 
-                    mkName $ x
 
     callexternalFun :: String -> Codegen Operand
     callexternalFun fname =
@@ -277,7 +278,7 @@ module ToLLVM where
               fn = ConstantOperand . 
                     GlobalReference (pType (FunctionType goTy [] False)) . 
                     mkName $ fname
-    gft = pType (FunctionType VoidType [] False)
+    gft = pType (FunctionType retType [] False)
 
     internalFunNames :: [(String, Type, [(Type, String)])]
     internalFunNames = 

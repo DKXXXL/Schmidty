@@ -2,6 +2,8 @@
 #include "gc.h"
 
 
+
+
 static GCHandler _gcinfo;
 static GCHandler* gcinfo;
 
@@ -179,14 +181,14 @@ goTy RIGHT(goTy x) {
 void _gothrough(goTy v, Marker marker, Marked marked);
 
 void gothrough(Marker marker, Marked marked) {
-    _gothrough(*envPt, marker, marked);
-    _gothrough(*regPt0, marker, marked);
-    _gothrough(*regPt1, marker, marked);
-    _gothrough(*regPt2, marker, marked);
-    _gothrough(*regPt3, marker, marked);
-    _gothrough(*regPt4, marker, marked);
-    _gothrough(*regPt5, marker, marked);
-    _gothrough(*regPt6, marker, marked);
+    _gothrough(envPt, marker, marked);
+    _gothrough(regPt0, marker, marked);
+    _gothrough(regPt1, marker, marked);
+    _gothrough(regPt2, marker, marked);
+    _gothrough(regPt3, marker, marked);
+    _gothrough(regPt4, marker, marked);
+    _gothrough(regPt5, marker, marked);
+    _gothrough(regPt6, marker, marked);
 }
 
 #define isliteral(v) ((v).type == TY_INT || (v).type == TY_BOOL || (v).type == TY_CHAR)
@@ -216,19 +218,21 @@ void _gothrough(goTy v, Marker marker, Marked marked) {
 
 extern void LABEL0();
 
-void applyForRegsArea(goTy rk, goTy r0,
-                        goTy r1,goTy r2, 
-                        goTy r3,goTy r4, 
-                        goTy r5,goTy r6, gft cont) 
+
+
+void applyForRegsArea(gft cont) 
 {
-    envPt = &rk;
-    regPt0 = &r0;
-    regPt1 = &r1;
-    regPt2 = &r2;
-    regPt3 = &r3;
-    regPt4 = &r4;
-    regPt5 = &r5;
-    regPt6 = &r6;
+    // envPt = &(regs[7]);
+    // regPt0 = &(regs[0]);
+    // regPt1 = &(regs[1]);
+    // regPt2 = &(regs[2]);
+    // regPt3 = &(regs[3]);
+    // regPt4 = &(regs[4]);
+    // regPt5 = &(regs[5]);
+    // regPt6 = &(regs[6]);
+    envPt = addEnv(envPt);
+    envPt = addEnv(envPt);
+    envPt = addEnv(envPt);
     return cont();
 
 }
@@ -243,7 +247,6 @@ int main() {
     mp2.pt = pool2;
     _gcinfo = GCInit(mp1, mp2, gothrough);
     gcinfo = &_gcinfo;
-
-    LABEL0();
+    applyForRegsArea(LABEL0);
 }
 

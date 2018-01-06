@@ -54,10 +54,10 @@ module Main where
     compilation extdict = (toAbsMachineL extdict) . toTmDecoration
 
     genLLVM = 
-        toLLVMAsm . 
+        toLLVMAsm' . 
         toLLVMModule
 
-    -- compile :: String -> IO ByteString
+    compile :: String -> IO String
     compile src =
         let !precompiled = preCompilation src
         in let !extInfo = unsafePerformIO . readIORef $ (NR.us_extDict)
@@ -72,11 +72,10 @@ module Main where
             then (compilation extInfo) $ precompiled
             else error "Type Checking Failed."  
 
-
     main = do
         input <- hGetContents stdin 
         output <- compile input
-        hPutStr stdout (show output)
+        hPutStr stdout output
     
     -- jitRunning :: String -> IO ()
 

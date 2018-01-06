@@ -86,11 +86,12 @@ goTy BEQ(goTy x, goTy y);
 goTy LEFT(goTy x);
 goTy RIGHT(goTy x);
 
-extern goTy* envPt;
-extern goTy* regPt0;
-extern goTy* regPt1;
-extern goTy* regPt2;
-extern goTy* regPt3;
-extern goTy* regPt4;
-extern goTy* regPt5;
-extern goTy* regPt6;
+
+extern goTy envPt;
+extern goTy regPt0;
+extern goTy regPt1;
+extern goTy regPt2;
+extern goTy regPt3;
+extern goTy regPt4;
+extern goTy regPt5;
+extern goTy regPt6;
