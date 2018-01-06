@@ -46,7 +46,8 @@ module ToLLVM where
         where labels' = reverse $ sort labels
               --- tollvm :: LLVM ()
               tollvm' = 
-                defAllRegs 
+                defAllExternFun
+                >> defAllRegs 
                 >> (mapM toFun labels') 
                 >> externFunCont
               allAst :: AST.Module
@@ -147,10 +148,16 @@ module ToLLVM where
     
     defAllRegs = mapM (defReg goTy) . allRegs $ registerNum
 
+    defAllExternFun =
+        mapM f' internalFunNames
+        where f' (fName, ret, argL) =
+                external ret fName argL'
+                where argL' = map (\(x, y)->(x, mkName y)) argL
+
     registerNum = 6
     allRegs x = 
         ["envPt"] ++
-        (map (("regPt" ++).show) [1..x])
+        (map (("regPt" ++).show) [0..x])
     
 
 
@@ -206,11 +213,9 @@ module ToLLVM where
         name        = mkName label
         , linkage     = L.External
         , parameters  = ([Parameter ty nm [] | (ty, nm) <- argtys], False)
-        , returnType  = retty
+        , returnType  = goTy
         , basicBlocks = []
         }
-        
-                
 
 
     fresh :: Codegen Word
@@ -223,6 +228,7 @@ module ToLLVM where
     
 
     instr :: Type -> Instruction -> Codegen (Operand)
+    instr VoidType _ = return . cint $ 0
     instr ty ins = do 
             n <- fresh
             let ref = (UnName n)
@@ -230,7 +236,7 @@ module ToLLVM where
             let i = stack blk
             modifyBlock (blk { stack = (ref := ins) : i } )
             return $ local ref
-      where local = LocalReference goTy
+      where local = LocalReference ty
             modifyBlock :: BlockState -> Codegen ()
             modifyBlock x = do
                 modify $ \s -> s {block = x}
@@ -239,7 +245,7 @@ module ToLLVM where
     getexternSchmidty i ty = do
         extrefs <- gets extfuns
         modify $ \s -> s {extfuns = callingname: extrefs} 
-        callinternalFunWithArg goTy callingname []
+        callexternalFun callingname
         where fname = idToVarName i
               callingname = "getExt" ++ fname
 
@@ -248,18 +254,29 @@ module ToLLVM where
         instr ty $ Call (Just Tail) CC.C [] (Right fn) args' [] []
         where fn :: Operand
               fn = ConstantOperand . 
-                    GlobalReference ty . 
+                    GlobalReference (pType (FunctionType retTys argTys False)) . 
                     mkName $ x
               args' = map (\x -> (x, [])) args
+              retTys = (\(x,y,z) -> y) $ signature
+              argTys = (map fst) . (\(x,y,z) -> z) $ signature
+              signature = head  . filter ((== x). (\(x,y,z)->x)) $ internalFunNames
     
+
     callinternalFun :: String -> Codegen Operand
     callinternalFun x = 
         instr retType $ Call (Just Tail) CC.C [] (Right fn) [] [] []
         where fn :: Operand
               fn = ConstantOperand . 
-                    GlobalReference retType . 
+                    GlobalReference (pType (FunctionType retType [] False)). 
                     mkName $ x
-    
+
+    callexternalFun :: String -> Codegen Operand
+    callexternalFun fname =
+        instr goTy $ Call (Just Tail) CC.C [] (Right fn) [] [] []
+        where fn :: Operand
+              fn = ConstantOperand . 
+                    GlobalReference (pType (FunctionType goTy [] False)) . 
+                    mkName $ fname
     gft = pType (FunctionType VoidType [] False)
 
     internalFunNames :: [(String, Type, [(Type, String)])]
@@ -292,7 +309,7 @@ module ToLLVM where
 
     
     store :: Operand -> Operand -> Codegen Operand
-    store ptr val = instr goTy $ Store False ptr val Nothing 0 []
+    store ptr val = instr VoidType $ Store False ptr val Nothing 0 []
     
     load :: Operand -> Codegen Operand
     load ptr = instr goTy $ Load False ptr Nothing 0 []
@@ -339,16 +356,16 @@ module ToLLVM where
         callinternalFunWithArg (goTy) "closureCons" [labelnof, envShell]
         where labelnof = 
                     ConstantOperand .
-                    GlobalReference (FunctionType retType [] False) .
+                    GlobalReference gft .
                     mkName . ("LABEL" ++ ) $ show labelno
     cgenValue (VContStack envloc entry out _) = do
                 entrance <- cgenValue (VClosure entry envloc)
                 out' <- cgenValue out
                 callinternalFunWithArg goTy "initContStack" [entrance, out']
-        where labelOfEntry = 
+{-        where labelOfEntry = 
                     ConstantOperand .
                     GlobalReference (FunctionType retType [] False) .
-                    mkName . ("LABEL" ++ ) $ show entry
+                    mkName . ("LABEL" ++ ) $ show entry -}
 
     cgenValue VTrue = 
         callinternalFunWithArg (goTy) "constInteger" [cint 1]
@@ -358,6 +375,9 @@ module ToLLVM where
 
     cgenValue (VChr i) = 
         callinternalFunWithArg (goTy) "constInteger" [cint i]
+
+    cgenValue VNone = 
+        callinternalFunWithArg (goTy) "constInteger" [cint 0]
     tcall :: Integer -> String -> Codegen ()
     tcall n x = do
                     args <- init n 
@@ -374,8 +394,8 @@ module ToLLVM where
                 return (l ++ [t])
               argsTys = map snd . zip [1..n] . repeat $ goTy
               x' = ConstantOperand . 
-                   GlobalReference (FunctionType goTy argsTys False) .
-                   mkName . show $ x
+                   GlobalReference (pType (FunctionType goTy argsTys False)) .
+                   mkName  $ x
 
     cgenStatement :: MachL -> Codegen ()
     cgenStatement (SetRegReg r1 r2) = do 
@@ -503,13 +523,13 @@ module ToLLVM where
         tcall nx (show x)
         where nx = snd . head . filter ((== x). fst) $ internalFlist
               internalFlist = 
-                [(SUC, 2),
-                 (DEC, 2),
-                 (NGT, 3),
-                 (NEQ, 3),
-                 (NLT, 3),
-                 (CEQ, 3),
-                 (BEQ, 3),
-                 (LEFT, 2),
-                 (RIGHT, 2)
+                [(SUC, 1),
+                 (DEC, 1),
+                 (NGT, 2),
+                 (NEQ, 2),
+                 (NLT, 2),
+                 (CEQ, 2),
+                 (BEQ, 2),
+                 (LEFT, 1),
+                 (RIGHT, 1)
                 ]

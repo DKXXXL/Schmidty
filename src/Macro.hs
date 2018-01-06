@@ -46,7 +46,7 @@ intOps = binOps ++ [SAtom "lambda",
       SAtom "if", SAtom "suc", SAtom "dec",
       SAtom "ceq", SAtom "beq", SAtom "let",
       SAtom "letrcd", SAtom "letext", SAtom "Record",
-      SAtom "left", SAtom "right",
+      SAtom "left", SAtom "right", SAtom "case",
       SAtom ">",  SAtom "<", SAtom "=", SAtom "Field"]
 
 carefulOperator :: SStruc -> Bool 

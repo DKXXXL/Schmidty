@@ -65,6 +65,13 @@ module Main where
             then genLLVM . (compilation extInfo) $ precompiled
             else error "Type Checking Failed."  
 
+    compile' src =
+        let !precompiled = preCompilation src
+        in let !extInfo = unsafePerformIO . readIORef $ (NR.us_extDict)
+        in if (typeChecking precompiled) 
+            then (compilation extInfo) $ precompiled
+            else error "Type Checking Failed."  
+
 
     main = do
         input <- hGetContents stdin 

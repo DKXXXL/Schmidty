@@ -94,7 +94,7 @@ varNameToid (x:[]) = toInteger . ord $ x
 varNameToid (x:s) = (toInteger . ord $ x) + (varNameToid s) * 128
 idToVarName :: Id -> String
 idToVarName i = 
-    if (i `div` 128) > 0 then [chr $ fromIntegral i] 
+    if (i `div` 128) == 0 then [chr $ fromIntegral i] 
     else (chr $ fromIntegral (i `mod` 128)):(idToVarName (i `div` 128))
 
 

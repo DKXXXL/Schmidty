@@ -88,7 +88,7 @@ module NameReassign where
     
     nameRes acc ct d (MLet i ty bind body) =
         let ni = unsafePerformIO $ acc ct
-        in MLet ni ty (nameRes acc ct d bind) (nameRes acc ct (addDict d i ni) body)
+        in MLet ni ty (nameRes acc ct (addDict d i ni) bind) (nameRes acc ct (addDict d i ni) body)
     
     nameRes acc ct d (MLetExt i ty body) =
         let ni = unsafePerformIO $ acc ct
@@ -203,6 +203,9 @@ module NameReassign where
     typenameRes acc ct d (MSeq pre post) =
         MSeq (typenameRes acc ct d pre) (typenameRes acc ct d post)
 
+    typenameRes _ _ _ x = 
+        x
+
     exists :: Eq a => a -> [a] -> Bool
     exists x = (/= Nothing) . elemIndex x
 
@@ -239,6 +242,9 @@ module NameReassign where
     recurMention s (MLet i ty bind body) =
         MLet i ty (recurMention (i : s) bind) (recurMention s body)
         
+    recurMention s (MLetExt i ty body) =
+        MLetExt i ty (recurMention s body)
+
     recurMention s (MBEQ a b) =
         MBEQ (recurMention s a) (recurMention s b)
 

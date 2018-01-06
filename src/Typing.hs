@@ -23,6 +23,9 @@ subtypeOf' d (TVar sub) super =
 subtypeOf' _ _ _ = False
 
 
+typeErrorInfo :: Tm -> Tm -> a
+typeErrorInfo x at = error $ "TypeChecing Error: " ++ (show at) ++ " AT " ++ (show x)
+
 has_type :: Tm -> Maybe Ty
 has_type = has_type' [] [] 
 
@@ -40,7 +43,7 @@ has_type' tyd vd (MIf crit bA bB) =
                     in if (tbA == (tyinCtx bB))
                         then tbA 
                         else Nothing
-               Nothing -> Nothing
+               Nothing -> typeErrorInfo crit (MIf crit bA bB)
 
 has_type' tyd vd (MVar id) = checkDict vd id 
 has_type' _ _ MZero = Just TNat
@@ -48,7 +51,12 @@ has_type' _ _ (MInt _) = Just TNat
 has_type' tyd vd (MSuc n) = 
     if (has_type' tyd vd n == Just TNat)
     then Just TNat 
-    else Nothing
+    else typeErrorInfo n (MSuc n)
+
+has_type' tyd vd (MDec n) = 
+    if (has_type' tyd vd n == Just TNat)
+    then Just TNat 
+    else typeErrorInfo n (MDec n)
 
 has_type' tyd vd (MNGT a b) = 
     let tyInCtx = has_type' tyd vd
@@ -57,7 +65,7 @@ has_type' tyd vd (MNGT a b) =
         b' <- tyInCtx b;
         if ((a' == TNat) && (b' == TNat))
             then Just TBool
-            else Nothing
+            else typeErrorInfo (MNGT a b) (MNGT a b)
     }
 has_type' tyd vd (MNLT a b) = 
     let tyInCtx = has_type' tyd vd
@@ -66,7 +74,7 @@ has_type' tyd vd (MNLT a b) =
         b' <- tyInCtx b;
         if ((a' == TNat) && (b' == TNat))
             then Just TBool
-            else Nothing
+            else typeErrorInfo (MNLT a b) (MNLT a b)
         }
 
 has_type' tyd vd (MNEQ a b) = 
@@ -76,7 +84,7 @@ has_type' tyd vd (MNEQ a b) =
         b' <- tyInCtx b;
         if ((a' == TNat) && (b' == TNat))
             then Just TBool
-            else Nothing
+            else typeErrorInfo (MNEQ a b) (MNEQ a b)
         }
 has_type' _ _ (MChr intg) = Just TChr
 has_type' tyd vd (MCEQ a b) = 
@@ -86,7 +94,7 @@ has_type' tyd vd (MCEQ a b) =
         b' <- tyInCtx b;
         if ((a' == TChr) && (b' == TChr))
             then Just TBool
-            else Nothing
+            else typeErrorInfo (MCEQ a b) (MCEQ a b)
         }
 has_type' tyd vd (MFun i tyI tm) =
     (has_type' tyd (addDict vd i tyI) tm) 
@@ -98,6 +106,7 @@ has_type' tyd vd (MApp f x) =
         xT <- tyInCtx x
         case fT of (TFun tyI tyO) ->
                         if (subtyOf tyd xT tyI) then Just tyO else Nothing
+                   _ -> typeErrorInfo f (MApp f x)
     
 
 has_type' tyd vd (MLet i ty bind body) =
@@ -148,11 +157,11 @@ has_type' tyd vd (MCase crit bA bB) =
                                                                     then Just oT'
                                                                     else if (subtyOf tyd oT' oT) 
                                                                         then Just oT
-                                                                        else Nothing
-                                                        else Nothing
-                                                     _ -> Nothing
-                                     _ -> Nothing
-                       _ -> Nothing
+                                                                        else typeErrorInfo (MCase crit bA bB) (MCase crit bA bB)
+                                                        else typeErrorInfo (MCase crit bA bB) (MCase crit bA bB)
+                                                     _ -> typeErrorInfo bB (MCase crit bA bB)
+                                     _ -> typeErrorInfo bA (MCase crit bA bB)
+                       _ -> typeErrorInfo crit (MCase crit bA bB)
     
 
 has_type' tyd vd (MLetRcd cName tyName suTy record body) =
@@ -162,6 +171,7 @@ has_type' tyd vd (MLetRcd cName tyName suTy record body) =
         then has_type' (addDict tyd tyName (suTy, record)) (addDict vd cName consTy) body
         else Nothing
         where (Just (_, suprecord)) = case suTy of (TVar s) -> checkDict tyd s
+                                                   _ -> typeErrorInfo (MLetRcd cName tyName suTy record body) (MLetRcd cName tyName suTy record body)
 
 has_type' tyd vd (MField (TVar tyid) fieldId) = do
         (_, rcdInf) <- checkDict tyd tyid

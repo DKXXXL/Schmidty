@@ -21,6 +21,7 @@ module ToAST where
     toAst (P.SChar s) = MChr s
     toAst (P.SBool t) = if t then MTrue else MFalse
     toAst (P.SNum i) = MInt $ fromIntegral i
+    toAst (P.SAtom "none") = MNone
     toAst (P.SAtom x) = MVar (varNameToid x)
     toAst (P.SList ((P.SAtom "left"):tm:ty:[])) =
         MLeft (toAst tm) (toType ty) 

@@ -26,7 +26,9 @@ module NameEli where
     
     nameEli c (TFSuc x cont) =
         TFSuc (nameEli' c x) (nameEli' c cont)
-    
+    nameEli c (TFDec x cont) =
+        TFDec (nameEli' c x) (nameEli' c cont)
+
     nameEli c (TFNGT a b cont) =
         TFNGT (nameEli' c a) (nameEli' c b) (nameEli' c cont)
 
