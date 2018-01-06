@@ -53,8 +53,9 @@ module Main where
 
     compilation extdict = (toAbsMachineL extdict) . toTmDecoration
 
-    genLLVM = -- toLLVMAsm . 
-         toLLVMModule
+    genLLVM = 
+        toLLVMAsm . 
+        toLLVMModule
 
     -- compile :: String -> IO ByteString
     compile src =
@@ -67,7 +68,7 @@ module Main where
 
     main = do
         input <- hGetContents stdin 
-        let output = compile input
+        output <- compile input
         hPutStr stdout (show output)
     
     -- jitRunning :: String -> IO ()

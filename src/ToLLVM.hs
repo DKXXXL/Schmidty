@@ -19,8 +19,8 @@ module ToLLVM where
     import LLVM.AST
     import LLVM.AST.Global
     import LLVM.AST.AddrSpace
----    import LLVM.Module
----    import LLVM.Context
+    import LLVM.Module
+    import LLVM.Context
     import qualified LLVM.AST.Linkage as L
     import qualified LLVM.AST.CallingConvention as CC
 
@@ -33,15 +33,14 @@ module ToLLVM where
     newtype Codegen a = Codegen { runCodegen :: State CodegenState a }
         deriving (Functor, Applicative, Monad, MonadState CodegenState )
 
-    
-{-}
+
     toLLVMAsm :: AST.Module -> IO ByteString
     toLLVMAsm asts =
         withContext $ \context ->
-            liftError $ withModuleFromAST context asts $ \m -> do
+              withModuleFromAST context asts $ \m -> do
               llstr <- moduleLLVMAssembly m
               return llstr
--}
+
     toLLVMModule :: [MLabel] -> (AST.Module)
     toLLVMModule labels = allAst
         where labels' = reverse $ sort labels
