@@ -137,7 +137,7 @@ module AbsMachine where
             return $ 
                 [SetReg (reg 3) closureOfCont,
                 ADDCONTSTACKIFEXIST i (reg 3),
-                SetEnvReg i (reg 1),
+                SetRegEnv (reg 1) i,
                 GOTOEVALBIND i (reg 3)
                 ]
     
