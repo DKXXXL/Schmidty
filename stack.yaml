@@ -1,5 +1,6 @@
 flags: {}
 packages:
 - .
-extra-deps: []
-resolver: lts-10.2
+extra-deps:
+- llvm-hs-pretty-0.1.0.0
+resolver: lts-10.3

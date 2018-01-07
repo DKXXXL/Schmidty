@@ -6,8 +6,7 @@ module ToLLVM where
 
 
     import Data.Word
-    import Data.ByteString (ByteString, pack)
-    import Data.ByteString.Char8 (unpack)
+    import Data.Text.Lazy(unpack)
     import Data.String
     import Data.List
     
@@ -20,8 +19,7 @@ module ToLLVM where
     import LLVM.AST
     import LLVM.AST.Global
     import LLVM.AST.AddrSpace
-    import LLVM.Module
-    import LLVM.Context
+    import LLVM.Pretty (ppllvm)
     import qualified LLVM.AST.Linkage as L
     import qualified LLVM.AST.CallingConvention as CC
 
@@ -35,14 +33,9 @@ module ToLLVM where
         deriving (Functor, Applicative, Monad, MonadState CodegenState )
 
     toLLVMAsm' :: AST.Module -> IO String
-    toLLVMAsm' = liftM unpack . toLLVMAsm
+    toLLVMAsm' = return . unpack . ppllvm
 
-    toLLVMAsm :: AST.Module -> IO ByteString
-    toLLVMAsm asts =
-        withContext $ \context ->
-              withModuleFromAST context asts $ \m -> do
-              llstr <- moduleLLVMAssembly m
-              return llstr
+    
 
     toLLVMModule :: [MLabel] -> (AST.Module)
     toLLVMModule labels = allAst
@@ -83,7 +76,7 @@ module ToLLVM where
               generatedCode :: CodegenState
               generatedCode = execState (runCodegen llvmInss) emptyCode
               emptyCode :: CodegenState
-              emptyCode = CodegenState (BlockState []) 1 []
+              emptyCode = CodegenState (BlockState []) 0 []
 
 
     
@@ -149,7 +142,7 @@ module ToLLVM where
             , initializer = Just initial
             , LLVM.AST.Global.type' = ty
         }
-        where initial = Struct Nothing False [Int machinebit 0, Null (IntegerType 8)]
+        where initial = Struct Nothing False [Int machinebit 0, Null (pType (IntegerType 8))]
     
     
     defAllRegs = mapM (defReg goTy) . allRegs $ registerNum
@@ -195,7 +188,7 @@ module ToLLVM where
               generatedCode :: CodegenState
               generatedCode = execState (runCodegen codegenbody) emptyCode
               emptyCode :: CodegenState
-              emptyCode = CodegenState (BlockState []) 1 []
+              emptyCode = CodegenState (BlockState []) 0 []
               codegenbody :: Codegen ()
               codegenbody = do
                         store (regPt 0) cont
