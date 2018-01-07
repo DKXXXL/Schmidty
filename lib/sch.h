@@ -60,7 +60,7 @@ goTy addEnv(goTy env);
 goTy constInteger(GINT x);
 goTy closureCons(gft f, goTy env);
 void setEnvContentToPt(goTy envContent, goTy envPt);
-goTy extractEnvContentFromPt(goTy envContent, goTy envPt);
+goTy extractEnvContentFromPt(goTy envPt);
 goTy ExtractEnvshellfromcls(goTy cls);
 goTy extractSumType(goTy sum);
 goTy initContStack(goTy entrance, goTy exit);

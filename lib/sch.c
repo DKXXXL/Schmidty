@@ -1,6 +1,7 @@
 #include "sch.h"
 #include "gc.h"
-
+#include "stdio.h"
+#define ASSERTS(x,y)     if(!(x)){printf(y);exit(0);}
 
 
 
@@ -8,7 +9,7 @@ static GCHandler _gcinfo;
 static GCHandler* gcinfo;
 
 goTy prevEnvshellByEnvshell(goTy envshell) {
-    EnvCore* envcore = (EnvCore*)envshell.data.pt;
+    EnvCore* envcore = (EnvCore*)(envshell.data.pt);
     return *(envcore->prevEnvShell);
 }
 
@@ -35,14 +36,17 @@ goTy closureCons(gft f, goTy env) {
 
 
 void setEnvContentToPt(goTy envContent, goTy envPt) {
+    ASSERTS(envPt.type == TY_ENVCORE, "IT's NOT ENV!")
     ((EnvCore*)(envPt.data.pt))->envContent = envContent;
 }
 
-goTy extractEnvContentFromPt(goTy envContent, goTy envPt) {
+goTy extractEnvContentFromPt(goTy envPt) {
+    ASSERTS(envPt.type == TY_ENVCORE, "IT's NOT ENV!");
     return ((EnvCore*)(envPt.data.pt))->envContent;
 }
 
 goTy ExtractEnvshellfromcls(goTy cls) {
+    ASSERTS(cls.type == TY_CLOSURE, "IT's NOT Closure!");
     return ((Closure*)(cls.data.pt))->envShell;
 }
 
@@ -230,6 +234,7 @@ void applyForRegsArea(gft cont)
     // regPt4 = &(regs[4]);
     // regPt5 = &(regs[5]);
     // regPt6 = &(regs[6]);
+    envPt.type = TY_ENVCORE;
     envPt = addEnv(envPt);
     envPt = addEnv(envPt);
     envPt = addEnv(envPt);

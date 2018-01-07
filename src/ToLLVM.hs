@@ -336,11 +336,13 @@ module ToLLVM where
     extractEnvContentFromPt x = 
         callinternalFunWithArg (goTy) "extractEnvContentFromPt" [x]
 
-    getEnvContentFromEnvloc x = 
-        getEnvshellatEnvloc x >>= extractEnvContentFromPt
-    
-    setEnvContentToEnvloc content x =
-        getEnvshellatEnvloc x >>= (setEnvContentToPt content)
+    getEnvContentFromEnvloc x = do
+        pt <- getEnvshellatEnvloc x
+        extractEnvContentFromPt pt
+
+    setEnvContentToEnvloc content x = do
+        pt <- getEnvshellatEnvloc x
+        setEnvContentToPt content pt
 
 
     cint :: Integer -> Operand

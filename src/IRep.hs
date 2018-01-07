@@ -122,7 +122,12 @@ module IRep where
 
 
     data MLabel = MLabel Integer [MachL] 
-            deriving Show
+            
+    instance Show MLabel where
+        show (MLabel i body) =
+            "LABEL" ++ show i ++ ":" ++ "\n" 
+            ++ ((foldl (\x y -> x ++ "\n" ++ y) ""). map show $ body ) 
+            ++ "\n"
 
     instance Eq MLabel where
         (MLabel i _) == (MLabel j _) = i == j
