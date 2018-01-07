@@ -64,7 +64,7 @@ goTy extractEnvContentFromPt(goTy envPt);
 goTy ExtractEnvshellfromcls(goTy cls);
 goTy extractSumType(goTy sum);
 goTy initContStack(goTy entrance, goTy exit);
-goTy JUMPBACKCONT(goTy fixinfo);
+goTy JUMPBACKCONT(goTy fixinfo,goTy copyfixinfo);
 goTy GOTOEVALBIND(goTy fixinfo, goTy maybeCont);
 void ADDCONTSTACKIFEXIST(goTy fixinfo, goTy orgcont);
 goTy CHECKFIXNODENECESSARY(goTy fixinfo, goTy maybe);

@@ -113,11 +113,11 @@ module CPS where
                ibindx = ECVar ibind
                ibindi' = Cont ibind'
                ibindx' = ECVar ibind'
-               bodyTF = cps ct body kont
+               (TFApp _ letislambda) = cps ct (MFun i ty body) ETrue
         in TFixApp 
             i ibindi 
             (cps ct bind ibindx) 
-            (ECont ibindi' (TFLet i ty ibindx' bodyTF))
+            (ECont ibindi' (TFAppc letislambda ibindx' kont))
     
     cps ct (MLetExt i ty body) kont =
         TFLetExt i ty (cps ct body kont)

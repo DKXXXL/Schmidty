@@ -54,10 +54,6 @@ module NameEli where
     nameEli c (TFFixC i cont) =
         TFFixC (nameEli' c i) (nameEli' c cont)
 
-    nameEli c (TFLet i ty bind body) =
-        let c' = addDict c (NId i) 0
-        in TFLet i ty (nameEli' c bind) (nameEli c' body)
-    
     nameEli c (TFLetExt i ty body) =
         let c' = addDict c (NId i) 0
         in TFLetExt i ty (nameEli c' body)

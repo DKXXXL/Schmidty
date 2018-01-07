@@ -60,24 +60,30 @@ goTy initContStack(goTy entrance, goTy exit) {
     return (goTy){TY_STACK, {.pt = stack}};
 }
 
-goTy JUMPBACKCONT(goTy fixinfo) {
-    loopStack* stack = fixinfo.data.pt;
-    if(stack->stack == NULL) {
+goTy JUMPBACKCONT(goTy fixinfo, goTy copyfixinfo) {
+    if(fixinfo.type != TY_STACK) {
+        loopStack* stack = copyfixinfo.data.pt;
         return stack->exit;
-    }
-    else {
-        loopStackNode* pt = stack->stack;
-        if(pt->nextlevel == NULL) {
-            stack-> stack = NULL;
-            return pt->cont;
-        } else {
-            while(pt->nextlevel != NULL 
-                && ((loopStackNode*)(pt->nextlevel))->nextlevel != NULL) {
-                pt = pt->nextlevel;
+    } else {
+        loopStack* stack = fixinfo.data.pt;
+        if(stack->stack == NULL) {
+            // should never happen
+            return stack->exit;
+        }
+        else {
+            loopStackNode* pt = stack->stack;
+            if(pt->nextlevel == NULL) {
+                stack-> stack = NULL;
+                return pt->cont;
+            } else {
+                while(pt->nextlevel != NULL 
+                    && ((loopStackNode*)(pt->nextlevel))->nextlevel != NULL) {
+                    pt = pt->nextlevel;
+                }
+                goTy ret = ((loopStackNode*)(pt->nextlevel))->cont;
+                pt->nextlevel = NULL;
+                return ret;
             }
-            goTy ret = ((loopStackNode*)(pt->nextlevel))->cont;
-            pt->nextlevel = NULL;
-            return ret;
         }
     }
 }
@@ -95,13 +101,19 @@ goTy GOTOEVALBIND(goTy fixinfo, goTy maybeCont){
 void ADDCONTSTACKIFEXIST(goTy fixinfo, goTy orgcont){
     if(fixinfo.type == TY_STACK) {
         loopStack* stack = fixinfo.data.pt;
-        loopStackNode* pt = stack->stack;
-        while(pt != NULL && pt->nextlevel != NULL) {
+        
+        if(stack->stack == NULL) {
+            stack->stack = GCAlloc(gcinfo, sizeof(loopStackNode));
+            *(stack->stack) =(loopStackNode){orgcont, NULL};
+        } else {
+            loopStackNode* pt = stack->stack;
+            while(pt != NULL && pt->nextlevel != NULL) {
+                pt = pt->nextlevel;
+            }
+            pt->nextlevel = GCAlloc(gcinfo, sizeof(loopStackNode));
             pt = pt->nextlevel;
+            *pt = (loopStackNode){orgcont, NULL};
         }
-        pt->nextlevel = GCAlloc(gcinfo, sizeof(loopStackNode));
-        pt = pt->nextlevel;
-        *pt = (loopStackNode){orgcont, NULL};
     }
 }
 

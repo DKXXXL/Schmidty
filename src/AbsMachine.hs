@@ -120,8 +120,9 @@ module AbsMachine where
             evalBind <- machl bind
             labelOfevalBind <- addnewfun evalBind
             let endEvalBind = 
-                    [CHECKFIXNODENECESSARY 1,
-                    JUMPBACKCONT 1] 
+                    [SetRegEnv (reg 4) 1,
+                    CHECKFIXNODENECESSARY 1,
+                    JUMPBACKCONT 1 (reg 4)] 
             labelOfendEvalBind <- addnewfun endEvalBind
             return $
                 [AddEnv 2,
@@ -140,15 +141,7 @@ module AbsMachine where
                 GOTOEVALBIND i (reg 3)
                 ]
     
-    
-    machl (TFLet i ty bind body) =do 
-            bind' <- machl' bind
-            body' <- machl body
-            return $ 
-                [AddEnv 1,
-                SetEnv 0 bind'
-                ] ++ body'
-        
+     
 
     machl (TFLetExt i ty body) =do 
             dict <- gets declare

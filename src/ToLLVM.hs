@@ -296,7 +296,7 @@ module ToLLVM where
          ("APP", VoidType, [((goTy), "x")]),
          ("IFJUMP", goTy, [((goTy), "crit"),(goTy, "tb"),(goTy, "fb")]),
          ("CASEJUMP", goTy, [((goTy), "crit"),(goTy, "lb"),(goTy, "rb"), (goTy, "cont")]),
-         ("JUMPBACKCONT", goTy, [((goTy), "fixinfo")]),
+         ("JUMPBACKCONT", goTy, [((goTy), "fixinfo"), ((goTy), "copyfixinfo")]),
          ("GOTOEVALBIND", goTy, [((goTy), "fixinfo"), ((goTy), "maybeCont")]),
          ("ADDCONTSTACKIFEXIST", VoidType, [((goTy), "fixinfo"), ((goTy), "cont")]),
          ("constInteger", goTy, [((IntegerType machinebit), "x")]),
@@ -475,9 +475,10 @@ module ToLLVM where
         callinternalFunWithArg retType "APP" [cls]
         return ()
 
-    cgenStatement (JUMPBACKCONT i) = do 
+    cgenStatement (JUMPBACKCONT i r1) = do 
         envContent <- getEnvContentFromEnvloc i
-        cont <- callinternalFunWithArg goTy "JUMPBACKCONT" [envContent]
+        copy <- load $ regPt r1
+        cont <- callinternalFunWithArg goTy "JUMPBACKCONT" [envContent, copy]
         store (regPt 0) cont
         >> (cgenStatement APP)
 

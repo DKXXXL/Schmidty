@@ -32,7 +32,6 @@ module IRep where
         -- 
         | TFFixC EForm EForm 
         --
-        | TFLet Id Ty EForm TForm
         | TFLetExt Id Ty TForm
         | TFBEQ EForm EForm EForm
         | TFLeft EForm EForm
@@ -103,7 +102,10 @@ module IRep where
         | IFJUMP
         | CASEJUMP
         --- About Evaluation of fixpoint
-        | JUMPBACKCONT Envloc
+        --- Jump back to last continuation where fixpoint is asked
+        --- Which should be at 'Envloc' but if it is not then it
+        --- definitely at 'Register'
+        | JUMPBACKCONT Envloc Register
         --- Check fixnode at envloc if need to subst
         ---- if it is, it will be subst
         | CHECKFIXNODENECESSARY Envloc
