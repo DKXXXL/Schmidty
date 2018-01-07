@@ -91,5 +91,14 @@ where <br />
 \# which hasn't been supported yet
 
 
-
+## Usage
+```
+$> git clone ...
+$> cd Schmidty
+$> stack build
+$> stack exec Schmidty < {-Source File-} > out.ll
+# Use stdin and stdout
+$> clang out.ll lib\sch.ll lib\gc.ll -o a.out
+# a.out is what you want.
+```
 
