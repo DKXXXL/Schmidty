@@ -111,8 +111,8 @@ goTy CHECKFIXNODENECESSARY(goTy fixinfo, goTy maybe) {
 }
 
 void APP(goTy x) {
-    gft f = x.data.pt;
-    return f();
+    Closure* cls = x.data.pt;
+    return (cls->label)();
 }
 
 goTy IFJUMP(goTy crit, goTy tb, goTy fb) {
