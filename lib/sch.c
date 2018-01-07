@@ -114,6 +114,24 @@ goTy CHECKFIXNODENECESSARY(goTy fixinfo, goTy maybe) {
     }
 }
 
+void ENDPROGRAM(goTy res) {
+    if(res.type == TY_INT) {
+        printf("%ld\n", res.data.cnt);
+    } 
+    else if(res.type == TY_CLOSURE) {
+        printf("<lambda:%lx>", (GINT)(res.data.pt));
+    } else if(res.type == TY_LEFT) {
+        printf("LEFT Type:\n");
+        ENDPROGRAM(*((goTy*)(res.data.pt)));
+    } else if(res.type == TY_RIGHT) {
+        printf("RIGHT Type:\n");
+        ENDPROGRAM(*((goTy*)(res.data.pt)));
+    }
+
+
+    return;
+}
+
 void APP(goTy x) {
     Closure* cls = x.data.pt;
     return (cls->label)();

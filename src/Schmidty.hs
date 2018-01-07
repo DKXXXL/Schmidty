@@ -13,6 +13,8 @@ module Main where
     import Typing as Ty 
     --- import TypeInfer as Ti
 
+    import System.Environment
+
 
     import Data.IORef
     import System.IO.Unsafe
@@ -65,16 +67,21 @@ module Main where
             then genLLVM . (compilation extInfo) $ precompiled
             else error "Type Checking Failed."  
 
+    compile' :: String -> IO String
     compile' src =
         let !precompiled = preCompilation src
         in let !extInfo = unsafePerformIO . readIORef $ (NR.us_extDict)
         in if (typeChecking precompiled) 
-            then (compilation extInfo) $ precompiled
+            then return . show . (compilation extInfo) $ precompiled
             else error "Type Checking Failed."  
 
     main = do
+        args <- getArgs
         input <- hGetContents stdin 
-        output <- compile input
+        output <- (if ((length args > 0) && ((args !! 0) == "-absM")) 
+                  then compile' input
+                  else compile input)
+  
         hPutStr stdout output
     
     -- jitRunning :: String -> IO ()

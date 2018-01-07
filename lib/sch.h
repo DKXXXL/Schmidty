@@ -74,6 +74,7 @@ void APP(goTy x);
 goTy IFJUMP(goTy crit, goTy tb, goTy fb);
 goTy CASEJUMP(goTy crit, goTy lb, goTy rb, goTy cont);
 
+void ENDPROGRAM(goTy x);
 /// Internal Functions
 
 goTy SUC(goTy x);

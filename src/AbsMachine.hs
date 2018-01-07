@@ -220,7 +220,8 @@ module AbsMachine where
     machl' EndCont = do
             let bodywithInit =
                     [AddEnv 1,
-                     SetEnvReg 0 1]
+                     SetEnvReg 0 1,
+                     ENDPROGRAM]
             labelnow <- addnewfun bodywithInit
             return $ VClosure labelnow 0
 

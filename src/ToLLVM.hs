@@ -306,6 +306,7 @@ module ToLLVM where
          ("extractEnvContentFromPt", goTy, [(goTy, "envPt")]),
          ("ExtractEnvshellfromcls", goTy, [(goTy, "cls")]),
          ("extractSumType", goTy, [(goTy, "sum")]),
+         ("ENDPROGRAM", VoidType, [(goTy, "res")]),
          ("CHECKFIXNODENECESSARY", goTy, [(goTy, "fixnode"), (goTy, "maybe")])]
 
     
@@ -386,7 +387,7 @@ module ToLLVM where
                     args <- init n 
                     let args' = zip args (repeat [])
                     result <- instr goTy $ Call Nothing CC.C [] (Right x') args' [] []
-                    cont <- load $ regPt n
+                    cont <- load $ regPt (n + 1)
                     store (regPt 0) cont
                     store (regPt 1) result
             >> (cgenStatement APP)
@@ -498,6 +499,11 @@ module ToLLVM where
         envContent <- getEnvContentFromEnvloc i
         rct <- load $ regPt r1
         callinternalFunWithArg retType "ADDCONTSTACKIFEXIST" [envContent, rct]
+        return ()
+
+    cgenStatement (ENDPROGRAM) = do 
+        res <- load $ regPt 1
+        callinternalFunWithArg VoidType "ENDPROGRAM" [res]
         return ()
     
     cgenStatement (IFJUMP) = do

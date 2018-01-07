@@ -118,6 +118,8 @@ module IRep where
         ----- envloc if stack is there, or do nothing
         | ADDCONTSTACKIFEXIST Envloc Register
         | EXTRACTINFOIFNOTSTACK Envloc Register
+        ----- Ending
+        | ENDPROGRAM
         deriving (Show, Eq)
 
 
