@@ -9,7 +9,7 @@ Forked from Emesch.
   - [x] LLVM backend, and thus to js, x86, etc
   - [ ] LLVM supported JIT compiler
   - [ ] LLVM supported FFI
-  - [ ] Formally verified interpreter, for checking the soundness of this language
+  - [ ] Formally verified interpreter, for checking the soundness of this language : [VSchmidty](https://github.com/DKXXXL/VSchmidty)
   - [ ] A light interpreter on web
   - [ ] A Sound and Strong Type Inference
   - [ ] Some kind of Generic/Higher Kinded Type without destroying the ability of Type Inference
