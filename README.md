@@ -1,7 +1,9 @@
 # Schmidty
 [![Build Status](https://travis-ci.org/DKXXXL/Schmidty.svg?branch=by-llvm-pretty-print)](https://travis-ci.org/DKXXXL/Schmidty)
 
-Customized Subtyping with sum type. Typing Core Scheme.
+Customized Subtyping with sum type. Typing Core Scheme. An exercise in Haskell, since this world doesn't need yet another programming language anymore.
+
+From now on, the focus will be on the formal semantic and the type system (See VSchmidty mentioned below) (or maybe other programming language features) instead of a real working implementation. 
 
 Forked from Emesch.
 
